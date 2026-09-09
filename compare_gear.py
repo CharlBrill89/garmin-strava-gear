@@ -103,9 +103,14 @@ def load_cached() -> tuple[list[Activity], list[Activity]]:
     strava_path = DATA_DIR / "strava_runs.json"
     if not (garmin_path.exists() and strava_path.exists()):
         sys.exit("No cache found in data/ — run once without --use-cache first.")
+    alias_path = DATA_DIR / "garmin_gear_aliases.json"
+    auto_aliases = (
+        json.loads(alias_path.read_text(encoding="utf-8")) if alias_path.exists() else {}
+    )
     return (
         _deserialise(json.loads(garmin_path.read_text(encoding="utf-8"))),
         _deserialise(json.loads(strava_path.read_text(encoding="utf-8"))),
+        auto_aliases,
     )
 
 
@@ -134,6 +139,7 @@ def fetch_all(
 
     client = garmin_source.connect()
     garmin_runs, _ = garmin_source.fetch_runs(client, start, end)
+    auto_aliases = garmin_source.gear_name_aliases(client)
     strava_runs, _ = strava_fetch()
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -143,7 +149,10 @@ def fetch_all(
     (DATA_DIR / "strava_runs.json").write_text(
         json.dumps(_serialise(strava_runs), indent=2), encoding="utf-8"
     )
-    return garmin_runs, strava_runs
+    (DATA_DIR / "garmin_gear_aliases.json").write_text(
+        json.dumps(auto_aliases, indent=2), encoding="utf-8"
+    )
+    return garmin_runs, strava_runs, auto_aliases
 
 
 def main() -> None:
@@ -176,14 +185,19 @@ def main() -> None:
         return
 
     if args.use_cache:
-        garmin_runs, strava_runs = load_cached()
+        garmin_runs, strava_runs, auto_aliases = load_cached()
         print(f"Cache: {len(garmin_runs)} Garmin runs, {len(strava_runs)} Strava runs")
     else:
-        garmin_runs, strava_runs = fetch_all(start, end, args.strava_csv)
+        garmin_runs, strava_runs, auto_aliases = fetch_all(start, end, args.strava_csv)
 
-    aliases = matching.load_aliases(ALIAS_PATH)
-    if aliases:
-        print(f"Loaded {len(aliases)} gear name aliases from {ALIAS_PATH.name}")
+    # Garmin's own nickname -> make/model mapping, then the user's file on top.
+    aliases = matching.aliases_from_pairs(auto_aliases)
+    for nickname, real in auto_aliases.items():
+        print(f"Garmin gear alias: {nickname!r} -> {real!r}")
+    file_aliases = matching.load_aliases(ALIAS_PATH)
+    if file_aliases:
+        print(f"Loaded {len(file_aliases)} gear name aliases from {ALIAS_PATH.name}")
+    aliases.update(file_aliases)
 
     pairs = matching.build_pairs(
         garmin_runs,

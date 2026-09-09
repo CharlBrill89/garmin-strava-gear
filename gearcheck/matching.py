@@ -64,6 +64,11 @@ def load_aliases(path: Path) -> dict[str, str]:
     return lookup
 
 
+def aliases_from_pairs(mapping: dict[str, str]) -> dict[str, str]:
+    """Turn {nickname: real name} into the lookup shape load_aliases returns."""
+    return {normalise(nickname): real for nickname, real in mapping.items() if real}
+
+
 def normalise(name: str) -> str:
     return _PUNCT.sub(" ", name.lower()).strip()
 

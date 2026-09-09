@@ -11,7 +11,7 @@ from __future__ import annotations
 import getpass
 import os
 import time
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -173,6 +173,29 @@ def _profile_number(client: Garmin) -> str:
 GEAR_ACTIVITY_LIMIT = 1000
 
 
+def gear_name_aliases(client: Garmin) -> dict[str, str]:
+    """Map each Garmin gear nickname to its real make/model.
+
+    Garmin keeps both: displayName is what you nicknamed the shoe ('Newbies')
+    and customMakeModel is what it actually is ('New Balance 880'). Only the
+    nickname shows on an activity, so a nickname that looks nothing like the
+    Strava name would otherwise read as a completely different shoe.
+    """
+    try:
+        items = client.get_gear(_profile_number(client)) or []
+    except Exception as exc:  # noqa: BLE001 - aliases are a nicety, not required
+        print(f"  (could not read gear names for aliasing: {exc})")
+        return {}
+
+    aliases: dict[str, str] = {}
+    for gear in items:
+        nickname = (gear.get("displayName") or "").strip()
+        make_model = (gear.get("customMakeModel") or "").strip()
+        if nickname and make_model and nickname.casefold() != make_model.casefold():
+            aliases[nickname] = make_model
+    return aliases
+
+
 def _gear_map_bulk(client: Garmin, activity_ids: set[str]) -> dict[str, list[str]] | None:
     """Build activity_id -> gear names with one call per gear item.
 
@@ -238,17 +261,28 @@ def fetch_runs(
     end: date,
     gear_delay_s: float = 0.25,
     bulk_gear: bool = True,
+    pad_days: int = 1,
 ) -> tuple[list[Activity], list[dict[str, Any]]]:
     """Fetch running activities in [start, end] plus the gear assigned to each.
+
+    Garmin filters get_activities_by_date by *local* date while we compare on
+    UTC, so a run logged late in the evening lands on the previous local day and
+    would fall outside the window — silently reported as having no Garmin
+    counterpart. Query a padded range and filter on UTC afterwards.
 
     With bulk_gear (the default), gear is resolved with one call per gear item
     rather than one per activity, falling back automatically if that looks
     unreliable. Returns (normalised activities, raw activity payloads).
     """
+    query_start = start - timedelta(days=pad_days)
+    query_end = end + timedelta(days=pad_days)
     raw = client.get_activities_by_date(
-        start.isoformat(), end.isoformat(), activitytype="running"
+        query_start.isoformat(), query_end.isoformat(), activitytype="running"
     )
-    print(f"Garmin: {len(raw)} running activities between {start} and {end}")
+    print(
+        f"Garmin: {len(raw)} running activities between {query_start} and {query_end} "
+        f"(padded {pad_days}d for timezone edges)"
+    )
 
     # Keep only runs with a usable start time, then resolve gear for those.
     candidates: list[tuple[dict[str, Any], str, datetime]] = []
@@ -260,6 +294,8 @@ def fetch_runs(
         if started is None:
             print(f"  ! skipping activity {item.get('activityId')}: unparseable start time")
             continue
+        if not (start <= started.date() <= end):
+            continue  # pulled in only by the padding; outside the UTC window
         candidates.append((item, str(item.get("activityId")), started))
 
     activity_ids = {activity_id for _, activity_id, _ in candidates}
