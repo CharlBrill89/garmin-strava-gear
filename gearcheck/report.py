@@ -44,7 +44,12 @@ CSV_COLUMNS = [
     "match_method",
     "garmin_activity_id",
     "strava_activity_id",
+    "garmin_url",
+    "strava_url",
 ]
+
+GARMIN_ACTIVITY_URL = "https://connect.garmin.com/modern/activity/{}"
+STRAVA_ACTIVITY_URL = "https://www.strava.com/activities/{}"
 
 
 def _row(pair: Pair) -> dict[str, object]:
@@ -62,6 +67,8 @@ def _row(pair: Pair) -> dict[str, object]:
         "match_method": pair.match_method,
         "garmin_activity_id": pair.garmin.activity_id if pair.garmin else "",
         "strava_activity_id": pair.strava.activity_id if pair.strava else "",
+        "garmin_url": GARMIN_ACTIVITY_URL.format(pair.garmin.activity_id) if pair.garmin else "",
+        "strava_url": STRAVA_ACTIVITY_URL.format(pair.strava.activity_id) if pair.strava else "",
     }
 
 
@@ -96,6 +103,112 @@ def summarise(pairs: list[Pair]) -> dict[str, object]:
         "problem_count": len(problems),
         "culprits": culprits,
     }
+
+
+def priority_needed(verdict: str) -> bool:
+    """True when a batch represents real reconciliation work."""
+    return verdict in {DIFFERENT, MISSING_STRAVA, MISSING_GARMIN}
+
+
+def _action_plan(pairs: list[Pair]) -> list[str]:
+    """Group the problems into batches of identical work, newest first.
+
+    Every row in a batch needs the same decision, so deciding once and then
+    working the list beats reasoning about each activity separately.
+    """
+    problems = [p for p in pairs if p.verdict in PROBLEM_VERDICTS]
+    if not problems:
+        return []
+
+    batches: dict[tuple[str, str, str], list[Pair]] = {}
+    for pair in problems:
+        key = (
+            pair.verdict,
+            pair.garmin.gear_label if pair.garmin else "",
+            pair.strava.gear_label if pair.strava else "",
+        )
+        batches.setdefault(key, []).append(pair)
+
+    decisions = sum(
+        1 for (verdict, _, _) in batches if priority_needed(verdict)
+    )
+    actionable = sum(
+        len(g) for (verdict, _, _), g in batches.items() if priority_needed(verdict)
+    )
+    lines = [
+        "",
+        "## Action plan",
+        "",
+        f"**{actionable} activities to fix, across {decisions} decisions.** Each batch "
+        "below needs one call on which platform is right, then it's just clicking "
+        "through the links. Batches needing no decision are last.",
+        "",
+    ]
+
+    # Actionable work first; "no gear anywhere" is bulk but needs no decision,
+    # so it goes last however large it is.
+    priority = {
+        DIFFERENT: 0,
+        MISSING_STRAVA: 1,
+        MISSING_GARMIN: 1,
+        NO_STRAVA_ACTIVITY: 2,
+        NO_GARMIN_ACTIVITY: 2,
+        MISSING_BOTH: 3,
+    }
+    order = sorted(
+        batches.items(),
+        key=lambda kv: (priority.get(kv[0][0], 9), -len(kv[1]), kv[0]),
+    )
+    for index, ((verdict, garmin_gear, strava_gear), group) in enumerate(order, start=1):
+        group.sort(key=lambda p: p.anchor.start_utc, reverse=True)
+        first = group[-1].anchor.start_utc.date()
+        last = group[0].anchor.start_utc.date()
+        span = f"{first}" if first == last else f"{first} → {last}"
+
+        lines.append(f"### {index}. {VERDICT_LABELS[verdict]} — {len(group)} activit"
+                     f"{'y' if len(group) == 1 else 'ies'} ({span})")
+        lines.append("")
+
+        if verdict == DIFFERENT:
+            lines += [
+                f"Garmin says **{garmin_gear}**, Strava says **{strava_gear}**.",
+                "",
+                f"- If Garmin is right → set Strava to *{garmin_gear}* "
+                "(Strava supports bulk editing: My Activities → select → Edit).",
+                f"- If Strava is right → set Garmin to *{strava_gear}* "
+                "(Garmin is one activity at a time).",
+            ]
+        elif verdict == MISSING_STRAVA:
+            lines.append(f"Garmin has **{garmin_gear}**; Strava has nothing. "
+                         "Bulk-edit these on Strava in one pass.")
+        elif verdict == MISSING_GARMIN:
+            lines.append(f"Strava has **{strava_gear}**; Garmin has nothing. "
+                         "Set gear on each Garmin activity.")
+        elif verdict == MISSING_BOTH:
+            lines.append("No gear on either side — nothing to reconcile unless you "
+                         "want to backfill what you wore.")
+        else:
+            lines.append("These didn't pair up, so check whether they're the same run "
+                         "recorded twice or genuinely one-sided.")
+
+        lines += ["", "| Date | Activity | km | Garmin | Strava |", "|---|---|---:|---|---|"]
+        for pair in group:
+            row = _row(pair)
+            g = (
+                f"[open]({GARMIN_ACTIVITY_URL.format(pair.garmin.activity_id)})"
+                if pair.garmin
+                else "—"
+            )
+            s = (
+                f"[open]({STRAVA_ACTIVITY_URL.format(pair.strava.activity_id)})"
+                if pair.strava
+                else "—"
+            )
+            name = str(row["name"]).replace("|", "\\|")
+            lines.append(f"| {row['date']} | {name} | {row['distance_km']} | {g} | {s} |")
+        lines.append("")
+
+    return lines
 
 
 def _table(rows: list[dict[str, object]]) -> list[str]:
@@ -144,6 +257,8 @@ def write_markdown(
         lines += [f"| {name} | {count} |" for name, count in culprits.most_common()]
     else:
         lines.append("Nothing mismatched — every activity agrees on gear.")
+
+    lines += _action_plan(pairs)
 
     problem_pairs = [p for p in pairs if p.verdict in PROBLEM_VERDICTS]
     if problem_pairs:
