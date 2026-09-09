@@ -127,7 +127,11 @@ def same_shoe(left: str, right: str, threshold: float) -> tuple[bool, str]:
             )
         return False, ""
 
-    if l_words and r_words and (l_words <= r_words or r_words <= l_words):
+    # Compare complete token sets, numbers included. Testing words alone would
+    # reduce "New Balance 880" to {new, balance} — a subset of every other New
+    # Balance shoe — so an 880 would match a FuelCell Rebel v4.
+    l_all, r_all = l_words | l_nums, r_words | r_nums
+    if l_all and r_all and (l_all <= r_all or r_all <= l_all):
         return True, "one name is a shortened form of the other"
 
     l_norm, r_norm = normalise(left), normalise(right)
