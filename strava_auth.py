@@ -13,7 +13,9 @@ from __future__ import annotations
 import secrets
 import sys
 import threading
+import time
 import webbrowser
+from html import escape
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import parse_qs, urlencode, urlparse
 
@@ -51,7 +53,14 @@ class _CallbackHandler(BaseHTTPRequestHandler):
     scope: str = ""
 
     def do_GET(self) -> None:  # noqa: N802 - stdlib naming
-        query = parse_qs(urlparse(self.path).query)
+        parsed = urlparse(self.path)
+        # Browsers also request /favicon.ico and friends; only the callback counts.
+        if parsed.path != "/callback":
+            self.send_response(404)
+            self.end_headers()
+            return
+
+        query = parse_qs(parsed.query)
         if "code" in query:
             _CallbackHandler.code = query["code"][0]
             _CallbackHandler.state = query.get("state", [""])[0]
@@ -59,7 +68,7 @@ class _CallbackHandler(BaseHTTPRequestHandler):
             body = "<h2>Authorised.</h2><p>You can close this tab and return to the terminal.</p>"
         else:
             _CallbackHandler.error = query.get("error", ["unknown_error"])[0]
-            body = f"<h2>Authorisation failed</h2><p>{_CallbackHandler.error}</p>"
+            body = f"<h2>Authorisation failed</h2><p>{escape(_CallbackHandler.error)}</p>"
 
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -110,14 +119,28 @@ def main() -> None:
     }
     url = f"{AUTHORIZE_URL}?{urlencode(params)}"
 
-    server = HTTPServer(("localhost", PORT), _CallbackHandler)
-    thread = threading.Thread(target=server.handle_request, daemon=True)
+    try:
+        server = HTTPServer(("localhost", PORT), _CallbackHandler)
+    except OSError as exc:
+        sys.exit(
+            f"Could not listen on localhost:{PORT} ({exc}). "
+            "Something else is using that port — close it and re-run."
+        )
+    server.timeout = 0.5
+
+    def serve_until_done(deadline: float) -> None:
+        while time.monotonic() < deadline:
+            if _CallbackHandler.code or _CallbackHandler.error:
+                return
+            server.handle_request()  # returns after server.timeout if idle
+
+    thread = threading.Thread(target=serve_until_done, args=(time.monotonic() + 300,), daemon=True)
     thread.start()
 
     print(f"\nOpening Strava consent page. If it doesn't open, paste this in a browser:\n{url}\n")
     webbrowser.open(url)
-    print(f"Waiting for the redirect to {REDIRECT_URI} ...")
-    thread.join(timeout=300)
+    print(f"Waiting for the redirect to {REDIRECT_URI} ... (Ctrl+C to give up)")
+    thread.join(timeout=305)
     server.server_close()
 
     if _CallbackHandler.error:
