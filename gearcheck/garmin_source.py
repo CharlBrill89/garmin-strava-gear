@@ -18,6 +18,7 @@ from typing import Any
 from garminconnect import (
     Garmin,
     GarminConnectAuthenticationError,
+    GarminConnectTooManyRequestsError,
 )
 
 from .models import Activity
@@ -41,6 +42,30 @@ def _tokenstore_path() -> str:
     return os.getenv("GARMINTOKENS") or DEFAULT_TOKENSTORE
 
 
+def _in_mintty() -> bool:
+    """Git Bash / MSYS2 run Windows Python without a real console attached."""
+    return os.name == "nt" and bool(os.environ.get("MSYSTEM"))
+
+
+def _warn_about_terminal() -> None:
+    if _in_mintty():
+        print(
+            "  Note: this looks like Git Bash, where hidden password prompts often\n"
+            "  swallow pasted text. If the paste doesn't register, either run this\n"
+            "  from PowerShell, or prefix the command with 'winpty'.\n"
+        )
+
+
+def _read_password() -> str:
+    """Prompt without echo, degrading gracefully where that isn't possible."""
+    try:
+        return getpass.getpass("  Garmin password: ")
+    except Exception as exc:  # noqa: BLE001 - no console, redirected stdin, etc.
+        print(f"  (hidden input unavailable: {exc})")
+        print("  WARNING: the password will be visible as you type it.")
+        return input("  Garmin password: ")
+
+
 def connect(quiet: bool = False) -> Garmin:
     """Return a logged-in client, reusing cached tokens when possible."""
     tokenstore = _tokenstore_path()
@@ -57,8 +82,9 @@ def connect(quiet: bool = False) -> Garmin:
             print(f"Garmin: cached tokens unusable ({type(exc).__name__}), re-authenticating.")
 
     print("\nGarmin Connect login (credentials are not stored anywhere).")
+    _warn_about_terminal()
     email = input("  Garmin email: ").strip()
-    password = getpass.getpass("  Garmin password: ")
+    password = _read_password()
     if not email or not password:
         raise SystemExit("Garmin email and password are both required.")
 
@@ -68,8 +94,27 @@ def connect(quiet: bool = False) -> Garmin:
     client = Garmin(email=email, password=password, prompt_mfa=prompt_mfa)
     try:
         client.login(tokenstore)
+    except GarminConnectTooManyRequestsError as exc:
+        raise SystemExit(
+            "\nGarmin rate-limited this IP address (HTTP 429), so your password was\n"
+            "never checked — this is not a credential problem.\n\n"
+            "The limit is per-IP and lifts on its own, usually within an hour. Each\n"
+            "further attempt restarts the clock, so don't retry in a loop.\n\n"
+            "  - Wait, then try once more.\n"
+            "  - A different network (phone hotspot) has a different IP and often works.\n"
+            "  - Once a login succeeds, tokens are cached and later runs won't hit\n"
+            f"    the login endpoint at all (cache: {tokenstore}).\n"
+            f"\nOriginal error: {exc}"
+        ) from exc
     except GarminConnectAuthenticationError as exc:
-        raise SystemExit(f"Garmin authentication failed: {exc}") from exc
+        message = str(exc)
+        if "429" in message or "too many" in message.lower():
+            raise SystemExit(
+                "\nGarmin rate-limited this IP address (HTTP 429). Your password was\n"
+                "never checked. Wait a while and try once — repeated attempts extend\n"
+                f"the block.\n\nOriginal error: {exc}"
+            ) from exc
+        raise SystemExit(f"\nGarmin authentication failed: {exc}") from exc
     finally:
         del password
 
