@@ -134,6 +134,73 @@ def _gear_display_name(gear: dict[str, Any]) -> str:
     return combined or f"<unnamed gear {gear.get('uuid', '?')}>"
 
 
+def _profile_number(client: Garmin) -> str:
+    """The userProfilePk that the gear endpoints key off."""
+    profile = client.get_user_profile() or {}
+    for key in ("id", "profileId", "userProfilePk", "userProfileId"):
+        value = profile.get(key)
+        if value:
+            return str(value)
+    user_data = profile.get("userData") or {}
+    for key in ("id", "profileId", "userProfilePk"):
+        value = user_data.get(key)
+        if value:
+            return str(value)
+    raise KeyError(f"no profile id in user settings (keys: {sorted(profile)[:12]})")
+
+
+# Ceiling used when asking for a gear's activity list. If a shoe comes back with
+# exactly this many, the list was probably truncated and older activities in our
+# window may be missing — which would look like "missing on Garmin" when it isn't.
+GEAR_ACTIVITY_LIMIT = 1000
+
+
+def _gear_map_bulk(client: Garmin, activity_ids: set[str]) -> dict[str, list[str]] | None:
+    """Build activity_id -> gear names with one call per gear item.
+
+    Far cheaper than one call per activity (a handful of shoes vs dozens of
+    runs), which matters because Garmin rate-limits aggressively. Returns None
+    if anything looks unreliable, so the caller falls back to the exact path.
+    """
+    try:
+        profile_number = _profile_number(client)
+        gear_items = client.get_gear(profile_number) or []
+    except Exception as exc:  # noqa: BLE001
+        print(f"  (bulk gear lookup unavailable: {exc}; using per-activity lookup)")
+        return None
+
+    if not gear_items:
+        return None
+
+    mapping: dict[str, list[str]] = {}
+    for gear in gear_items:
+        uuid = gear.get("uuid")
+        if not uuid:
+            continue
+        name = _gear_display_name(gear)
+        try:
+            used_in = client.get_gear_activities(uuid, limit=GEAR_ACTIVITY_LIMIT) or []
+        except Exception as exc:  # noqa: BLE001
+            print(f"  (gear activity list failed for {name}: {exc}; using per-activity lookup)")
+            return None
+
+        if len(used_in) >= GEAR_ACTIVITY_LIMIT:
+            print(
+                f"  ('{name}' returned {len(used_in)} activities — the list may be "
+                "truncated, so falling back to the exact per-activity lookup)"
+            )
+            return None
+
+        for item in used_in:
+            activity_id = str(item.get("activityId") or "")
+            if activity_id in activity_ids:
+                mapping.setdefault(activity_id, []).append(name)
+        time.sleep(0.2)
+
+    print(f"  gear resolved from {len(gear_items)} gear items ({len(gear_items) + 2} API calls)")
+    return mapping
+
+
 def _parse_start(raw: dict[str, Any]) -> datetime | None:
     """Garmin returns startTimeGMT as 'YYYY-MM-DD HH:MM:SS' in UTC."""
     value = raw.get("startTimeGMT")
@@ -152,37 +219,54 @@ def fetch_runs(
     start: date,
     end: date,
     gear_delay_s: float = 0.25,
+    bulk_gear: bool = True,
 ) -> tuple[list[Activity], list[dict[str, Any]]]:
     """Fetch running activities in [start, end] plus the gear assigned to each.
 
-    Returns (normalised activities, raw activity payloads).
+    With bulk_gear (the default), gear is resolved with one call per gear item
+    rather than one per activity, falling back automatically if that looks
+    unreliable. Returns (normalised activities, raw activity payloads).
     """
     raw = client.get_activities_by_date(
         start.isoformat(), end.isoformat(), activitytype="running"
     )
     print(f"Garmin: {len(raw)} running activities between {start} and {end}")
 
-    activities: list[Activity] = []
-    for index, item in enumerate(raw, start=1):
+    # Keep only runs with a usable start time, then resolve gear for those.
+    candidates: list[tuple[dict[str, Any], str, datetime]] = []
+    for item in raw:
         type_key = (item.get("activityType") or {}).get("typeKey", "")
         if type_key and type_key not in RUNNING_TYPE_KEYS:
             continue
-
         started = _parse_start(item)
         if started is None:
             print(f"  ! skipping activity {item.get('activityId')}: unparseable start time")
             continue
+        candidates.append((item, str(item.get("activityId")), started))
 
-        activity_id = str(item.get("activityId"))
-        try:
-            gear_items = client.get_activity_gear(activity_id) or []
-        except Exception as exc:  # noqa: BLE001 - one bad activity shouldn't kill the run
-            print(f"  ! gear lookup failed for {activity_id}: {exc}")
-            gear_items = []
-        if isinstance(gear_items, dict):
-            gear_items = [gear_items]
+    activity_ids = {activity_id for _, activity_id, _ in candidates}
+    gear_map: dict[str, list[str]] | None = None
+    if bulk_gear:
+        gear_map = _gear_map_bulk(client, activity_ids)
 
-        item["_gear"] = gear_items
+    activities: list[Activity] = []
+    for index, (item, activity_id, started) in enumerate(candidates, start=1):
+        if gear_map is not None:
+            gear_names = gear_map.get(activity_id, [])
+        else:
+            try:
+                gear_items = client.get_activity_gear(activity_id) or []
+            except Exception as exc:  # noqa: BLE001 - one bad activity shouldn't kill the run
+                print(f"  ! gear lookup failed for {activity_id}: {exc}")
+                gear_items = []
+            if isinstance(gear_items, dict):
+                gear_items = [gear_items]
+            item["_gear"] = gear_items
+            gear_names = [_gear_display_name(g) for g in gear_items]
+            print(f"\r  gear {index}/{len(candidates)}", end="", flush=True)
+            if gear_delay_s:
+                time.sleep(gear_delay_s)  # be polite to Garmin's API
+
         activities.append(
             Activity(
                 source="garmin",
@@ -191,14 +275,11 @@ def fetch_runs(
                 start_utc=started,
                 distance_m=float(item.get("distance") or 0.0),
                 duration_s=float(item.get("duration") or 0.0),
-                sport=type_key or "running",
-                gear=[_gear_display_name(g) for g in gear_items],
+                sport=(item.get("activityType") or {}).get("typeKey") or "running",
+                gear=gear_names,
             )
         )
 
-        print(f"\r  gear {index}/{len(raw)}", end="", flush=True)
-        if gear_delay_s:
-            time.sleep(gear_delay_s)  # be polite to Garmin's API
-
-    print()
+    if gear_map is None:
+        print()
     return activities, raw
