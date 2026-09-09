@@ -1,0 +1,5 @@
+{
+  "_comment": "Copy to gear_aliases.json to declare that two gear names are the same shoe. Key = the name you want in the report, value = list of spellings seen on either platform. Matching is case- and punctuation-insensitive.",
+  "Nike Pegasus 41": ["Nike Air Zoom Pegasus 41", "Peg 41", "pegasus41"],
+  "Hoka Clifton 9": ["Clifton 9", "HOKA ONE ONE Clifton 9"]
+}

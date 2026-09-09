@@ -1,0 +1,18 @@
+# Credentials — never commit
+.env
+.env.*
+!.env.example
+.garmin_tokens/
+*.token
+*.tokens
+
+# Cached API pulls (contain personal activity data)
+data/
+reports/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.ruff_cache/
