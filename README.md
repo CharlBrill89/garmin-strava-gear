@@ -11,7 +11,42 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-### 1. Strava — register an app and authorise
+### 1. Strava — pick a route
+
+**Since 1 June 2026 the Strava API requires a paid Strava subscription**
+(Standard Tier). Data export stayed free, so there are two options:
+
+| | Bulk export CSV | API |
+|---|---|---|
+| Cost | free | needs a Strava subscription |
+| Freshness | snapshot; re-request per run | live |
+| Setup | request an archive, wait a few hours | OAuth, one-time |
+
+#### Route A — bulk export (free, no subscription)
+
+1. On strava.com: **Settings → My Account → Download or Delete Your Account →
+   Request your archive**. The email takes a few hours.
+2. Unzip it and find `activities.csv`.
+3. Check the file parses as expected before relying on it:
+
+   ```bash
+   python compare_gear.py --inspect-strava-csv path/to/activities.csv
+   ```
+
+   This prints which columns were detected, the inferred distance units, a
+   parsed date sample, and the gear values found. Strava doesn't document the
+   CSV format and it has drifted between exports, so nothing is assumed from
+   column position — but do glance at the output.
+4. Run the comparison:
+
+   ```bash
+   python compare_gear.py --days 90 --strava-csv path/to/activities.csv
+   ```
+
+Note the export has no Garmin activity id, so pairing falls back to start time
+plus a distance check rather than the exact `external_id` route.
+
+#### Route B — API (needs a subscription)
 
 ```bash
 python strava_auth.py
@@ -59,6 +94,8 @@ python compare_gear.py --days 90
 | `--start` / `--end` | — | Explicit `YYYY-MM-DD` window |
 | `--tolerance-seconds` | 180 | Start-time slack when matching by time |
 | `--fuzzy-threshold` | 0.85 | Name similarity above which two labels are the same shoe |
+| `--strava-csv PATH` | — | Read Strava from a bulk-export `activities.csv` instead of the API |
+| `--inspect-strava-csv PATH` | — | Show detected columns/units for an export, then exit |
 | `--use-cache` | off | Re-render from the last pull in `data/` without hitting the APIs |
 | `--problems-only` | off | Drop the full activity table from the markdown |
 | `--out-dir` | `reports/` | Where to write |
@@ -68,7 +105,9 @@ Outputs `reports/gear_comparison_<start>_to_<end>.csv` and `.md`.
 ## How activities are matched
 
 1. **`external_id`** — Strava stores Garmin uploads with an id like
-   `garmin_push_1234567890`, which embeds the Garmin activity id. Exact when present.
+   `garmin_push_1234567890`, which embeds the Garmin activity id. Exact when
+   present, but the API is the only source that carries it; the CSV export
+   doesn't include it.
 2. **Start time** — nearest Strava run within `--tolerance-seconds`, rejected if
    the distances disagree by more than 5%.
 

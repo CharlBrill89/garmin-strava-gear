@@ -15,7 +15,7 @@ from dataclasses import asdict
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-from gearcheck import env_store, garmin_source, matching, report
+from gearcheck import env_store, garmin_source, matching, report, strava_csv
 from gearcheck.models import Activity
 from gearcheck.strava_source import StravaClient, StravaError
 
@@ -42,6 +42,23 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=0.85,
         help="name similarity above which two gear names count as the same shoe (default 0.85)",
+    )
+    parser.add_argument(
+        "--strava-csv",
+        help=(
+            "read Strava from a bulk-export activities.csv instead of the API "
+            "(the API needs a paid Strava subscription as of June 2026)"
+        ),
+    )
+    parser.add_argument(
+        "--inspect-strava-csv",
+        help="print the columns detected in an export CSV and exit; takes a path",
+    )
+    parser.add_argument(
+        "--garmin-check",
+        action="store_true",
+        help="log in to Garmin, print recent runs and their gear, and exit "
+        "(verifies Garmin auth and gear parsing without needing Strava)",
     )
     parser.add_argument("--out-dir", default=str(REPORT_DIR), help="where to write the report")
     parser.add_argument(
@@ -92,17 +109,32 @@ def load_cached() -> tuple[list[Activity], list[Activity]]:
     )
 
 
-def fetch_all(start: date, end: date) -> tuple[list[Activity], list[Activity]]:
+def fetch_all(
+    start: date, end: date, strava_csv_path: str | None = None
+) -> tuple[list[Activity], list[Activity]]:
     env_store.load()
 
-    try:
-        strava = StravaClient()
-    except StravaError as exc:
-        sys.exit(str(exc))
+    # Resolve the Strava side first — no point prompting for a Garmin login if
+    # the Strava source is misconfigured.
+    if strava_csv_path:
+        csv_path = Path(strava_csv_path)
+        if not csv_path.exists():
+            sys.exit(f"No such file: {csv_path}")
+        strava_fetch = lambda: strava_csv.fetch_runs(csv_path, start, end)  # noqa: E731
+    else:
+        try:
+            client_strava = StravaClient()
+        except StravaError as exc:
+            sys.exit(
+                f"{exc}\n\nStrava's API has required a paid subscription since June 2026. "
+                "Without one, use the free data export instead:\n"
+                "  compare_gear.py --strava-csv path/to/activities.csv"
+            )
+        strava_fetch = lambda: client_strava.fetch_runs(start, end)  # noqa: E731
 
     client = garmin_source.connect()
     garmin_runs, _ = garmin_source.fetch_runs(client, start, end)
-    strava_runs, _ = strava.fetch_runs(start, end)
+    strava_runs, _ = strava_fetch()
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     (DATA_DIR / "garmin_runs.json").write_text(
@@ -116,14 +148,38 @@ def fetch_all(start: date, end: date) -> tuple[list[Activity], list[Activity]]:
 
 def main() -> None:
     args = parse_args()
+
+    if args.inspect_strava_csv:
+        path = Path(args.inspect_strava_csv)
+        if not path.exists():
+            sys.exit(f"No such file: {path}")
+        print(strava_csv.inspect(path))
+        return
+
     start, end = resolve_window(args)
     print(f"Window: {start} to {end}")
+
+    if args.garmin_check:
+        client = garmin_source.connect()
+        runs, _ = garmin_source.fetch_runs(client, start, end)
+        print(f"\n{len(runs)} running activities:\n")
+        print(f"{'date':<11} {'km':>6}  {'activity':<28} gear")
+        print("-" * 78)
+        for run in sorted(runs, key=lambda a: a.start_utc, reverse=True):
+            name = run.name[:27]
+            print(
+                f"{run.start_utc:%Y-%m-%d} {run.distance_km:6.2f}  "
+                f"{name:<28} {run.gear_label or '(none assigned)'}"
+            )
+        without = sum(1 for r in runs if not r.gear)
+        print(f"\n{len(runs) - without} with gear, {without} without.")
+        return
 
     if args.use_cache:
         garmin_runs, strava_runs = load_cached()
         print(f"Cache: {len(garmin_runs)} Garmin runs, {len(strava_runs)} Strava runs")
     else:
-        garmin_runs, strava_runs = fetch_all(start, end)
+        garmin_runs, strava_runs = fetch_all(start, end, args.strava_csv)
 
     aliases = matching.load_aliases(ALIAS_PATH)
     if aliases:
