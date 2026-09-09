@@ -73,6 +73,21 @@ automatically on later runs.
 
 ### 2. Garmin — no setup needed
 
+If the hidden password prompt won't accept a paste (common in Git Bash, where
+Python has no real console), let bash read it instead and pass it through the
+environment:
+
+```bash
+read -s -p "Garmin password: " GARMIN_PASSWORD && export GARMIN_PASSWORD && echo
+python compare_gear.py --days 30 --garmin-check
+unset GARMIN_PASSWORD    # tokens are cached; the password isn't needed again
+```
+
+`read -s` is a bash builtin, so pasting works. The value lives only in the
+shell's memory — it is not written to disk, not echoed, and not saved in shell
+history (it never appears on a command line). `GARMIN_EMAIL` works the same way.
+
+
 `compare_gear.py` prompts for your Garmin email and password the first time (MFA
 too, if your account has it). Those are used once to mint session tokens, which
 are cached at `~/.garminconnect`. Later runs reuse the cache and never prompt.

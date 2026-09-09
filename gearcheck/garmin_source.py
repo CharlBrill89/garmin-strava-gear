@@ -82,9 +82,25 @@ def connect(quiet: bool = False) -> Garmin:
             print(f"Garmin: cached tokens unusable ({type(exc).__name__}), re-authenticating.")
 
     print("\nGarmin Connect login (credentials are not stored anywhere).")
-    _warn_about_terminal()
-    email = input("  Garmin email: ").strip()
-    password = _read_password()
+
+    # GARMIN_EMAIL / GARMIN_PASSWORD let the shell supply the credentials, which
+    # is the reliable way in on Git Bash: bash's `read -s` accepts pasted text,
+    # whereas Python's getpass has no real console there and drops it. The value
+    # stays in the shell's memory — nothing is written to disk either way.
+    email = (os.getenv("GARMIN_EMAIL") or "").strip()
+    password = os.getenv("GARMIN_PASSWORD") or ""
+
+    if email:
+        print(f"  email from GARMIN_EMAIL: {email}")
+    else:
+        email = input("  Garmin email: ").strip()
+
+    if password:
+        print("  password from GARMIN_PASSWORD (not shown)")
+    else:
+        _warn_about_terminal()
+        password = _read_password()
+
     if not email or not password:
         raise SystemExit("Garmin email and password are both required.")
 
@@ -119,6 +135,8 @@ def connect(quiet: bool = False) -> Garmin:
         del password
 
     print(f"Garmin: logged in as {client.display_name}; tokens cached at {tokenstore}")
+    if os.getenv("GARMIN_PASSWORD"):
+        print("  Tokens are cached now, so you can clear the variable: unset GARMIN_PASSWORD")
     return client
 
 
