@@ -61,6 +61,44 @@ def test_missing_gear_column_is_a_clear_error(tmp_path: Path):
         strava_csv.fetch_runs(path, date(2026, 9, 1), date(2026, 9, 30), quiet=True)
 
 
+def test_resolve_export_accepts_zip_folder_or_csv(export: Path, tmp_path: Path):
+    import zipfile
+
+    # A realistic archive: the CSVs plus the media that makes it 77 MB in real life.
+    archive = tmp_path / "export_12345678.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.write(export, "activities.csv")
+        zf.writestr("shoes.csv", "Shoe Name,Shoe Brand,Shoe Model\n,Hoka,Speedgoat 5\n")
+        zf.writestr("media/photo.jpg", b"\xff\xd8 not really a jpeg")
+        zf.writestr("profile.csv", "a,b\n")
+
+    extract_dir = tmp_path / "unpacked"
+    got = strava_csv.resolve_export(archive, extract_dir)
+    assert got == extract_dir / "activities.csv"
+    assert (extract_dir / "shoes.csv").exists()
+    assert not (extract_dir / "media").exists()  # only the CSVs come out
+    assert not (extract_dir / "profile.csv").exists()
+
+    # The unzipped folder and the CSV itself resolve to the same file.
+    assert strava_csv.resolve_export(extract_dir, tmp_path / "x") == got
+    assert strava_csv.resolve_export(got, tmp_path / "x") == got
+
+
+def test_resolve_export_rejects_wrong_inputs(tmp_path: Path):
+    import zipfile
+
+    with pytest.raises(strava_csv.StravaCsvError, match="No such file"):
+        strava_csv.resolve_export(tmp_path / "missing.zip", tmp_path)
+    with pytest.raises(strava_csv.StravaCsvError, match="no activities.csv"):
+        strava_csv.resolve_export(tmp_path, tmp_path)  # empty folder
+
+    not_strava = tmp_path / "other.zip"
+    with zipfile.ZipFile(not_strava, "w") as zf:
+        zf.writestr("readme.txt", "hi")
+    with pytest.raises(strava_csv.StravaCsvError, match="bulk export"):
+        strava_csv.resolve_export(not_strava, tmp_path / "out")
+
+
 def test_latest_activity_date(export: Path):
     assert strava_csv.latest_activity_date(export) == date(2026, 9, 4)
 
