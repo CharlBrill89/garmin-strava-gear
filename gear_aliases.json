@@ -1,0 +1,27 @@
+{
+  "_comment": "Canonical name -> every spelling seen on Garmin or Strava. Matching is case- and punctuation-insensitive. Rename the keys to whatever you want the report to say.",
+
+  "New Balance 880": [
+    "Newbies"
+  ],
+  "New Balance FuelCell Rebel v4": [
+    "NB FuelCell Rebel v4"
+  ],
+  "HOKA Clifton 9": [],
+  "Saucony Peregrine 12": [
+    "Saucony Peregrine 12 wide",
+    "Saucony Peregrine"
+  ],
+  "Reebok Floatride Energy": [
+    "Reebok Floatrider Energy"
+  ],
+  "Adidas Adizero SL 2": [
+    "Adizero",
+    "Adidas Adizero SL 2 M",
+    "Adidas Adizero SL M Adizero"
+  ],
+  "Altra Experience Flow": [
+    "Altra Experience Flow Altras",
+    "Altras"
+  ]
+}
