@@ -108,6 +108,22 @@ Your Garmin password is never written to disk.
 
 ## Run
 
+The easy ways:
+
+- **Double-click `gearcheck.cmd`** — compares using the last-loaded export and
+  opens the HTML report. **Drag a new export zip onto it** to load that zip first.
+- **From bash**, add to `~/.bashrc` once:
+
+  ```bash
+  alias gearcheck='/c/projects/garmin-strava-gear/gearcheck.sh'
+  ```
+
+  then `gearcheck` from anywhere, or `gearcheck ~/Downloads/export_12345678.zip`
+  to load a new one. Extra flags pass straight through (`gearcheck --days 30`).
+
+The full command underneath:
+
+
 ```bash
 python compare_gear.py --days 90
 ```
