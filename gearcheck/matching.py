@@ -145,6 +145,28 @@ def same_shoe(left: str, right: str, threshold: float) -> tuple[bool, str]:
     return False, ""
 
 
+def _spread(a: float, b: float) -> float:
+    return abs(a - b) / max(a, b)
+
+
+def _same_run_witness(g: Activity, s: Activity) -> str | None:
+    """Is a time-adjacent pair really one run? Returns a label, or None.
+
+    Uploads of the same GPS run agree on distance to well within 5%. Treadmill
+    runs don't — each platform calibrates its own distance — so duration is
+    the fallback witness: nobody starts two different runs in the same minute
+    and finishes them after the same elapsed time.
+    """
+    have_distance = bool(g.distance_m and s.distance_m)
+    if have_distance and _spread(g.distance_m, s.distance_m) <= 0.05:
+        return ""
+    if g.duration_s and s.duration_s and _spread(g.duration_s, s.duration_s) <= 0.10:
+        return ", by duration" if have_distance else ""
+    if not have_distance and not (g.duration_s and s.duration_s):
+        return ""  # nothing to check against; time proximity is all we have
+    return None
+
+
 def match_activities(
     garmin: list[Activity],
     strava: list[Activity],
@@ -167,28 +189,27 @@ def match_activities(
                 used_garmin.add(g.activity_id)
                 used_strava.add(s.activity_id)
 
-    # Pass 2: nearest start time, with a distance sanity check
+    # Pass 2: nearest start time, with a sanity check that it's the same run
     remaining_strava = [s for s in strava if s.activity_id not in used_strava]
     for g in sorted(garmin, key=lambda a: a.start_utc):
         if g.activity_id in used_garmin:
             continue
         best: Activity | None = None
         best_delta = None
+        best_witness = ""
         for s in remaining_strava:
             if s.activity_id in used_strava:
                 continue
             delta = abs((s.start_utc - g.start_utc).total_seconds())
             if delta > tolerance_s:
                 continue
-            # Uploads of the same run agree on distance to well within 5%.
-            if g.distance_m and s.distance_m:
-                spread = abs(g.distance_m - s.distance_m) / max(g.distance_m, s.distance_m)
-                if spread > 0.05:
-                    continue
+            witness = _same_run_witness(g, s)
+            if witness is None:
+                continue
             if best_delta is None or delta < best_delta:
-                best, best_delta = s, delta
+                best, best_delta, best_witness = s, delta, witness
         if best is not None:
-            pairs.append((g, best, f"start_time (+/-{int(best_delta)}s)"))
+            pairs.append((g, best, f"start_time (+/-{int(best_delta)}s{best_witness})"))
             used_garmin.add(g.activity_id)
             used_strava.add(best.activity_id)
 

@@ -104,11 +104,28 @@ def test_every_verdict_on_synthetic_data():
     assert by_key["g8"].match_method.startswith("start_time")
 
 
-def test_distance_guard_rejects_time_match_with_different_distance():
-    garmin = [_g(1, ["A"], dist=10000)]
-    strava = [_s(1, ["A"], dist=8000)]  # 20% apart at the same moment
+def test_distance_and_duration_both_disagreeing_is_not_the_same_run():
+    garmin = [Activity("garmin", "g1", "Run", BASE, 10000, 3000, "running", ["A"])]
+    strava = [Activity("strava", "s1", "Run", BASE, 8000, 2000, "Run", ["A"])]
     matched, only_g, only_s = matching.match_activities(garmin, strava)
     assert matched == [] and len(only_g) == 1 and len(only_s) == 1
+
+
+def test_treadmill_distances_disagree_but_duration_pairs_them():
+    # Real case: 1.00 km vs 0.82 km (18% apart), both 6 minutes, same start.
+    garmin = [Activity("garmin", "g1", "Treadmill Running", BASE, 1000, 360, "treadmill_running", [])]
+    strava = [Activity("strava", "s1", "Afternoon Run", BASE, 820, 361, "Run", ["Reebok"])]
+    matched, only_g, only_s = matching.match_activities(garmin, strava)
+    assert len(matched) == 1 and not only_g and not only_s
+    _, _, method = matched[0]
+    assert "by duration" in method
+
+
+def test_agreeing_distance_does_not_mention_duration():
+    garmin = [_g(1, ["A"])]
+    strava = [_s(1, ["A"], drift_s=30)]
+    (pair,) = matching.match_activities(garmin, strava)[0]
+    assert pair[2] == "start_time (+/-30s)"
 
 
 # --- aliases ----------------------------------------------------------------
