@@ -169,6 +169,21 @@ def inspect(path: Path) -> str:
     return "\n".join(lines)
 
 
+def latest_activity_date(path: Path) -> date | None:
+    """The newest activity in the export — nothing after it can be compared."""
+    header, rows = _read_rows(path)
+    found = _locate(header)
+    if not found["date"]:
+        return None
+    index = found["date"][0]
+    dates = [
+        parsed.date()
+        for row in rows
+        if index < len(row) and (parsed := parse_date(row[index])) is not None
+    ]
+    return max(dates) if dates else None
+
+
 def fetch_runs(
     path: Path, start: date, end: date, quiet: bool = False
 ) -> tuple[list[Activity], list[dict[str, Any]]]:
