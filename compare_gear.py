@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 """Compare the shoes assigned to your runs on Garmin Connect vs Strava.
 
-  python compare_gear.py --days 90
+  python compare_gear.py --strava-csv ~/Downloads/export_12345678.zip   # load a new export
+  python compare_gear.py                                                 # reuse the last one
   python compare_gear.py --start 2026-01-01 --end 2026-06-30
-  python compare_gear.py --days 90 --use-cache      # re-render from the last pull
+  python compare_gear.py --use-cache      # re-render from the last pull, no API calls
 """
 
 from __future__ import annotations
@@ -55,9 +56,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--strava-csv",
+        metavar="ZIP_OR_CSV",
         help=(
-            "read Strava from a bulk-export activities.csv instead of the API "
-            "(the API needs a paid Strava subscription as of June 2026)"
+            "the Strava bulk-export .zip (or its unzipped folder, or activities.csv). "
+            "A zip is unpacked into data/strava_export/ and reused on later runs, so "
+            "pass this only when there's a new export. The API route needs a paid "
+            "Strava subscription as of June 2026."
         ),
     )
     parser.add_argument(
@@ -146,7 +150,7 @@ def _deserialise(rows: list[dict]) -> list[Activity]:
     ]
 
 
-def load_cached() -> tuple[list[Activity], list[Activity]]:
+def load_cached() -> tuple[list[Activity], list[Activity], dict[str, str]]:
     garmin_path = DATA_DIR / "garmin_runs.json"
     strava_path = DATA_DIR / "strava_runs.json"
     if not (garmin_path.exists() and strava_path.exists()):
@@ -162,17 +166,41 @@ def load_cached() -> tuple[list[Activity], list[Activity]]:
     )
 
 
+EXPORT_DIR = DATA_DIR / "strava_export"
+
+
+def locate_strava_export(flag: str | None) -> Path | None:
+    """Decide where Strava data comes from.
+
+    --strava-csv can point at the export .zip, its unzipped folder, or the
+    activities.csv inside. With no flag, and no API tokens configured, fall
+    back to whatever export was unpacked last time — so the flag is only
+    needed when there's a new archive to load.
+    """
+    env_store.load()
+    if flag:
+        try:
+            return strava_csv.resolve_export(Path(flag), EXPORT_DIR)
+        except strava_csv.StravaCsvError as exc:
+            sys.exit(str(exc))
+
+    if env_store.get("STRAVA_REFRESH_TOKEN"):
+        return None  # API is configured; use it
+
+    previous = EXPORT_DIR / "activities.csv"
+    if previous.exists():
+        return previous
+    return None
+
+
 def fetch_all(
-    start: date, end: date, strava_csv_path: str | None = None
-) -> tuple[list[Activity], list[Activity]]:
+    start: date, end: date, csv_path: Path | None = None
+) -> tuple[list[Activity], list[Activity], dict[str, str]]:
     env_store.load()
 
     # Resolve the Strava side first — no point prompting for a Garmin login if
     # the Strava source is misconfigured.
-    if strava_csv_path:
-        csv_path = Path(strava_csv_path)
-        if not csv_path.exists():
-            sys.exit(f"No such file: {csv_path}")
+    if csv_path:
         strava_fetch = lambda: strava_csv.fetch_runs(csv_path, start, end)  # noqa: E731
     else:
         try:
@@ -181,7 +209,7 @@ def fetch_all(
             sys.exit(
                 f"{exc}\n\nStrava's API has required a paid subscription since June 2026. "
                 "Without one, use the free data export instead:\n"
-                "  compare_gear.py --strava-csv path/to/activities.csv"
+                "  compare_gear.py --strava-csv ~/Downloads/export_XXXXXXXX.zip"
             )
         strava_fetch = lambda: client_strava.fetch_runs(start, end)  # noqa: E731
 
@@ -251,11 +279,13 @@ def main() -> None:
         return
 
     export_span = None
-    if args.strava_csv and not args.use_cache:
-        csv_path = Path(args.strava_csv)
-        if not csv_path.exists():
-            sys.exit(f"No such file: {csv_path}")
-        export_span = strava_csv.activity_date_range(csv_path)
+    csv_path: Path | None = None
+    if not args.use_cache:
+        csv_path = locate_strava_export(args.strava_csv)
+        if csv_path:
+            export_span = strava_csv.activity_date_range(csv_path)
+            if export_span:
+                print(f"Strava export: {csv_path} (activities up to {export_span[1]})")
 
     start, end = resolve_window(args, export_span)
 
@@ -289,7 +319,7 @@ def main() -> None:
         garmin_runs, strava_runs, auto_aliases = load_cached()
         print(f"Cache: {len(garmin_runs)} Garmin runs, {len(strava_runs)} Strava runs")
     else:
-        garmin_runs, strava_runs, auto_aliases = fetch_all(start, end, args.strava_csv)
+        garmin_runs, strava_runs, auto_aliases = fetch_all(start, end, csv_path)
 
     if args.gear_names:
         print_gear_names(garmin_runs, strava_runs, auto_aliases)

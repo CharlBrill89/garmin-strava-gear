@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import csv
 import statistics
+import zipfile
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -45,6 +46,45 @@ DATE_FORMATS = [
 
 class StravaCsvError(RuntimeError):
     pass
+
+
+# The only files worth pulling out of a bulk-export archive. The rest is
+# media and settings, typically tens of megabytes of it.
+EXPORT_MEMBERS = ("activities.csv", "shoes.csv", "bikes.csv")
+
+
+def resolve_export(source: Path, extract_dir: Path) -> Path:
+    """Accept the export .zip, a folder it was unzipped into, or activities.csv
+    itself; return the path to activities.csv.
+
+    A zip is unpacked into extract_dir (just the CSVs), so the next run can use
+    the extracted copy without the flag.
+    """
+    source = source.expanduser()
+    if not source.exists():
+        raise StravaCsvError(f"No such file or folder: {source}")
+
+    if source.is_dir():
+        candidate = source / "activities.csv"
+        if not candidate.exists():
+            raise StravaCsvError(f"{source} has no activities.csv in it")
+        return candidate
+
+    if source.suffix.lower() == ".zip":
+        with zipfile.ZipFile(source) as archive:
+            names = set(archive.namelist())
+            if "activities.csv" not in names:
+                raise StravaCsvError(
+                    f"{source.name} has no activities.csv — is it a Strava bulk export?"
+                )
+            extract_dir.mkdir(parents=True, exist_ok=True)
+            for member in EXPORT_MEMBERS:
+                if member in names:
+                    archive.extract(member, extract_dir)
+        print(f"Strava: unpacked {source.name} → {extract_dir}")
+        return extract_dir / "activities.csv"
+
+    return source
 
 
 def _norm(text: str) -> str:

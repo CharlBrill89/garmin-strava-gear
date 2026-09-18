@@ -25,26 +25,35 @@ pip install -r requirements.txt
 #### Route A — bulk export (free, no subscription)
 
 1. On strava.com: **Settings → My Account → Download or Delete Your Account →
-   Request your archive**. The email takes a few hours.
-2. Unzip it and find `activities.csv`.
-3. Check the file parses as expected before relying on it:
+   Request your archive**. The email takes a few hours. (If the link in the
+   email won't resolve, a DNS-level ad blocker — ProtonVPN NetShield, Pi-hole,
+   etc. — is blocking Strava's click-tracker; the same download is available on
+   the settings page.)
+2. Point the tool at the zip. It unpacks just the CSVs into `data/strava_export/`:
 
    ```bash
-   python compare_gear.py --inspect-strava-csv path/to/activities.csv
+   python compare_gear.py --strava-csv ~/Downloads/export_12345678.zip
    ```
 
-   This prints which columns were detected, the inferred distance units, a
-   parsed date sample, and the gear values found. Strava doesn't document the
-   CSV format and it has drifted between exports, so nothing is assumed from
-   column position — but do glance at the output.
-4. Run the comparison:
+3. From then on, no flag needed — it reuses the last unpacked export:
 
    ```bash
-   python compare_gear.py --strava-csv path/to/activities.csv
+   python compare_gear.py
    ```
 
-Note the export has no Garmin activity id, so pairing falls back to start time
-plus a distance check rather than the exact `external_id` route.
+   Pass `--strava-csv` again only when you have a *new* archive. The output
+   always says which export it used and how recent it is.
+
+The export has no Garmin activity id, so pairing falls back to start time
+plus a distance (or duration) check rather than the exact `external_id` route.
+Runs after the export's newest activity are skipped rather than reported as
+missing — the export is a snapshot, and Garmin is live.
+
+To check an export's structure before trusting it:
+
+```bash
+python compare_gear.py --inspect-strava-csv data/strava_export/activities.csv
+```
 
 #### Route B — API (needs a subscription)
 
@@ -111,7 +120,7 @@ python compare_gear.py --days 90
 | `--start` / `--end` | — | Explicit `YYYY-MM-DD` window |
 | `--tolerance-seconds` | 180 | Start-time slack when matching by time |
 | `--fuzzy-threshold` | 0.85 | Name similarity above which two labels are the same shoe |
-| `--strava-csv PATH` | — | Read Strava from a bulk-export `activities.csv` instead of the API |
+| `--strava-csv ZIP` | last unpacked | The Strava export zip (or its folder / `activities.csv`) |
 | `--inspect-strava-csv PATH` | — | Show detected columns/units for an export, then exit |
 | `--gear-names` | — | List every gear name per platform and how they pair up, then exit |
 | `--use-cache` | off | Re-render from the last pull in `data/` without hitting the APIs |
