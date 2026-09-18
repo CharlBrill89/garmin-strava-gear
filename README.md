@@ -113,9 +113,18 @@ python compare_gear.py --days 90
 | `--inspect-strava-csv PATH` | — | Show detected columns/units for an export, then exit |
 | `--use-cache` | off | Re-render from the last pull in `data/` without hitting the APIs |
 | `--problems-only` | off | Drop the full activity table from the markdown |
+| `--open` | off | Open the HTML report in your browser when done |
 | `--out-dir` | `reports/` | Where to write |
 
-Outputs `reports/gear_comparison_<start>_to_<end>.csv` and `.md`.
+Outputs `reports/gear_comparison_<start>_to_<end>.csv`, `.md` and `.html`.
+
+The `.html` is the easiest way to work through the results: a single
+self-contained page (no server, no network) with the verdict counts as
+clickable filters, the action plan as collapsible batches with "open all on
+Strava/Garmin" buttons, and a searchable, sortable table of every activity.
+Each problem row has a checkbox so you can tick it off as you fix it; that
+state lives in your browser's localStorage, keyed by activity id, so it
+survives regenerating the report.
 
 ## How activities are matched
 
