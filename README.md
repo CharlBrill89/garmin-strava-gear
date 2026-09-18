@@ -40,7 +40,7 @@ pip install -r requirements.txt
 4. Run the comparison:
 
    ```bash
-   python compare_gear.py --days 90 --strava-csv path/to/activities.csv
+   python compare_gear.py --strava-csv path/to/activities.csv
    ```
 
 Note the export has no Garmin activity id, so pairing falls back to start time
@@ -105,7 +105,9 @@ python compare_gear.py --days 90
 
 | Flag | Default | What it does |
 |---|---|---|
-| `--days N` | 90 | Look back N days |
+| *(none)* | — | With `--strava-csv`: the whole export. Otherwise 90 days |
+| `--all` | — | Whole export, or everything since 2000 via the API |
+| `--days N` | — | Look back N days |
 | `--start` / `--end` | — | Explicit `YYYY-MM-DD` window |
 | `--tolerance-seconds` | 180 | Start-time slack when matching by time |
 | `--fuzzy-threshold` | 0.85 | Name similarity above which two labels are the same shoe |

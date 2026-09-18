@@ -169,8 +169,8 @@ def inspect(path: Path) -> str:
     return "\n".join(lines)
 
 
-def latest_activity_date(path: Path) -> date | None:
-    """The newest activity in the export — nothing after it can be compared."""
+def activity_date_range(path: Path) -> tuple[date, date] | None:
+    """(oldest, newest) activity in the export — the span it can answer for."""
     header, rows = _read_rows(path)
     found = _locate(header)
     if not found["date"]:
@@ -181,7 +181,13 @@ def latest_activity_date(path: Path) -> date | None:
         for row in rows
         if index < len(row) and (parsed := parse_date(row[index])) is not None
     ]
-    return max(dates) if dates else None
+    return (min(dates), max(dates)) if dates else None
+
+
+def latest_activity_date(path: Path) -> date | None:
+    """The newest activity in the export — nothing after it can be compared."""
+    span = activity_date_range(path)
+    return span[1] if span else None
 
 
 def fetch_runs(

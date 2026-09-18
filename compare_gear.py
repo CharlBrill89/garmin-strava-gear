@@ -29,7 +29,16 @@ ALIAS_PATH = ROOT / "gear_aliases.json"
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     window = parser.add_mutually_exclusive_group()
-    window.add_argument("--days", type=int, default=90, help="look back N days (default 90)")
+    window.add_argument(
+        "--days",
+        type=int,
+        help="look back N days (default: the whole export with --strava-csv, else 90)",
+    )
+    window.add_argument(
+        "--all",
+        action="store_true",
+        help="the full span of the Strava export (or everything since 2000 via the API)",
+    )
     parser.add_argument("--start", help="window start, YYYY-MM-DD (overrides --days)")
     parser.add_argument("--end", help="window end, YYYY-MM-DD (default today)")
     parser.add_argument(
@@ -86,11 +95,38 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def resolve_window(args: argparse.Namespace) -> tuple[date, date]:
-    end = date.fromisoformat(args.end) if args.end else datetime.now(timezone.utc).date()
-    start = date.fromisoformat(args.start) if args.start else end - timedelta(days=args.days)
+def resolve_window(
+    args: argparse.Namespace, export_span: tuple[date, date] | None
+) -> tuple[date, date]:
+    """Work out [start, end].
+
+    With an export and no explicit window, the export's own span is the only
+    sensible default — it is the bounded dataset, so "everything" means it.
+    Without an export, the API is open-ended and 90 days is the default.
+    """
+    today = datetime.now(timezone.utc).date()
+    explicit = args.days is not None or args.start or args.end
+    whole = args.all or (export_span is not None and not explicit)
+
+    if whole and not args.start and not args.end:
+        if export_span:
+            start, end = export_span
+            print(f"Window: whole Strava export, {start} to {end}")
+        else:
+            start, end = date(2000, 1, 1), today
+            print(f"Window: everything since {start}")
+        return start, end
+
+    end = date.fromisoformat(args.end) if args.end else today
+    if args.start:
+        start = date.fromisoformat(args.start)
+    elif whole:
+        start = export_span[0] if export_span else date(2000, 1, 1)
+    else:
+        start = end - timedelta(days=args.days if args.days is not None else 90)
     if start > end:
         sys.exit("--start must be on or before --end")
+    print(f"Window: {start} to {end}")
     return start, end
 
 
@@ -214,20 +250,24 @@ def main() -> None:
         print(strava_csv.inspect(path))
         return
 
-    start, end = resolve_window(args)
+    export_span = None
+    if args.strava_csv and not args.use_cache:
+        csv_path = Path(args.strava_csv)
+        if not csv_path.exists():
+            sys.exit(f"No such file: {csv_path}")
+        export_span = strava_csv.activity_date_range(csv_path)
+
+    start, end = resolve_window(args, export_span)
 
     # A Strava export is a snapshot. Runs after its newest activity can't be
     # compared, so don't fetch them from Garmin only to flag them as unmatched.
-    if args.strava_csv and not args.use_cache:
-        csv_path = Path(args.strava_csv)
-        latest = strava_csv.latest_activity_date(csv_path) if csv_path.exists() else None
-        if latest and end > latest:
+    if export_span:
+        latest = export_span[1]
+        if end > latest:
             print(f"Strava export ends {latest}; window end moved from {end} to match.")
             end = latest
-        if latest and start > latest:
+        if start > latest:
             sys.exit(f"Window starts {start}, but the Strava export ends {latest}.")
-
-    print(f"Window: {start} to {end}")
 
     if args.garmin_check:
         client = garmin_source.connect()
