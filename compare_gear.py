@@ -56,6 +56,12 @@ def parse_args() -> argparse.Namespace:
         help="print the columns detected in an export CSV and exit; takes a path",
     )
     parser.add_argument(
+        "--gear-names",
+        action="store_true",
+        help="list every distinct gear name on each platform, with how often they "
+        "were paired together, then exit — for building gear_aliases.json",
+    )
+    parser.add_argument(
         "--garmin-check",
         action="store_true",
         help="log in to Garmin, print recent runs and their gear, and exit "
@@ -161,6 +167,43 @@ def fetch_all(
     return garmin_runs, strava_runs, auto_aliases
 
 
+def print_gear_names(
+    garmin_runs: list[Activity], strava_runs: list[Activity], auto_aliases: dict[str, str]
+) -> None:
+    """Show what each platform calls things, and which names travel together."""
+    from collections import Counter
+
+    garmin_names = Counter(n for a in garmin_runs for n in a.gear)
+    strava_names = Counter(n for a in strava_runs for n in a.gear)
+
+    print("\nGarmin gear names (activities using each):")
+    for name, count in garmin_names.most_common():
+        hint = f"   [Garmin's make/model: {auto_aliases[name]}]" if name in auto_aliases else ""
+        print(f"  {count:>4}  {name}{hint}")
+
+    print("\nStrava gear names (activities using each):")
+    for name, count in strava_names.most_common():
+        print(f"  {count:>4}  {name}")
+
+    # Pair raw names on time-matched activities, no aliasing, to show which
+    # spellings co-occur — the strongest evidence for what maps to what.
+    matched, _, _ = matching.match_activities(garmin_runs, strava_runs)
+    together: Counter[tuple[str, str]] = Counter()
+    for g, s, _ in matched:
+        if g.gear and s.gear:
+            together[(g.gear_label, s.gear_label)] += 1
+
+    print("\nHow they pair up on the same runs (Garmin  ->  Strava):")
+    for (g, s), count in together.most_common():
+        print(f"  {count:>4}  {g:<30} ->  {s}")
+
+    print(
+        "\nBuild gear_aliases.json as {\"canonical name\": [\"spelling\", ...]} — see "
+        "gear_aliases.example.json. Every spelling from either platform that means the "
+        "same shoe goes in one list."
+    )
+
+
 def main() -> None:
     args = parse_args()
 
@@ -172,6 +215,18 @@ def main() -> None:
         return
 
     start, end = resolve_window(args)
+
+    # A Strava export is a snapshot. Runs after its newest activity can't be
+    # compared, so don't fetch them from Garmin only to flag them as unmatched.
+    if args.strava_csv and not args.use_cache:
+        csv_path = Path(args.strava_csv)
+        latest = strava_csv.latest_activity_date(csv_path) if csv_path.exists() else None
+        if latest and end > latest:
+            print(f"Strava export ends {latest}; window end moved from {end} to match.")
+            end = latest
+        if latest and start > latest:
+            sys.exit(f"Window starts {start}, but the Strava export ends {latest}.")
+
     print(f"Window: {start} to {end}")
 
     if args.garmin_check:
@@ -195,6 +250,10 @@ def main() -> None:
         print(f"Cache: {len(garmin_runs)} Garmin runs, {len(strava_runs)} Strava runs")
     else:
         garmin_runs, strava_runs, auto_aliases = fetch_all(start, end, args.strava_csv)
+
+    if args.gear_names:
+        print_gear_names(garmin_runs, strava_runs, auto_aliases)
+        return
 
     # Garmin's own nickname -> make/model mapping, then the user's file on top.
     aliases = matching.aliases_from_pairs(auto_aliases)

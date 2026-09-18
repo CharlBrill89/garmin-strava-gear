@@ -245,6 +245,14 @@ def build_pairs(
     tolerance_s: int = 180,
     fuzzy_threshold: float = 0.85,
 ) -> list[Pair]:
+    # Rewrite gear to canonical names up front so the report reads consistently
+    # on both sides; the platform's own spelling is kept in gear_raw.
+    if aliases:
+        for activity in (*garmin, *strava):
+            if not activity.gear_raw:
+                activity.gear_raw = list(activity.gear)
+            activity.gear = [canonical(name, aliases) for name in activity.gear]
+
     matched, only_garmin, only_strava = match_activities(garmin, strava, tolerance_s)
 
     pairs = [

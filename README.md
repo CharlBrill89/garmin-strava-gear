@@ -111,6 +111,7 @@ python compare_gear.py --days 90
 | `--fuzzy-threshold` | 0.85 | Name similarity above which two labels are the same shoe |
 | `--strava-csv PATH` | — | Read Strava from a bulk-export `activities.csv` instead of the API |
 | `--inspect-strava-csv PATH` | — | Show detected columns/units for an export, then exit |
+| `--gear-names` | — | List every gear name per platform and how they pair up, then exit |
 | `--use-cache` | off | Re-render from the last pull in `data/` without hitting the APIs |
 | `--problems-only` | off | Drop the full activity table from the markdown |
 | `--open` | off | Open the HTML report in your browser when done |
@@ -152,8 +153,44 @@ over-reports mismatches, so:
   prefix on one side doesn't sink the score) decides, at `--fuzzy-threshold`.
 
 Anything resolved this way is reported under **Name variants** so you can check
-the call. To settle a case permanently, copy `gear_aliases.example.json` to
-`gear_aliases.json` and declare the equivalence.
+the call.
+
+### Mapping names explicitly
+
+Guesswork is a fallback. The reliable route is to tell the tool what maps to
+what in `gear_aliases.json`:
+
+```json
+{
+  "New Balance 880": ["Newbies"],
+  "Saucony Peregrine 12": ["Saucony Peregrine 12 wide", "Saucony Peregrine"]
+}
+```
+
+Key = the name you want in the report; list = every spelling either platform
+uses. Both sides are rewritten to the key before comparing, so the report reads
+consistently and the fuzzy matcher never gets involved. The platform's original
+spelling is kept in the CSV as `garmin_gear_raw` / `strava_gear_raw`.
+
+To see what needs mapping:
+
+```bash
+python compare_gear.py --days 365 --strava-csv activities.csv --gear-names
+```
+
+That lists every gear name on each platform and how often each pair of names
+landed on the same run — the co-occurrence counts make the mapping obvious.
+
+Two mappings come for free: Garmin's own nickname → make/model
+(`Newbies` → `New Balance 880`, from the gear's `customMakeModel`) is applied
+automatically, and anything in `gear_aliases.json` wins over it.
+
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
 
 ## Verdicts
 
