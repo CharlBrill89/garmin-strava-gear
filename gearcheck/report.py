@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 from collections import Counter
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
@@ -110,31 +111,67 @@ def priority_needed(verdict: str) -> bool:
     return verdict in {DIFFERENT, MISSING_STRAVA, MISSING_GARMIN}
 
 
-def _action_plan(pairs: list[Pair]) -> list[str]:
+@dataclass
+class Batch:
+    """A group of problem rows that all need the same decision."""
+
+    verdict: str
+    garmin_gear: str
+    strava_gear: str
+    pairs: list[Pair]  # newest first
+
+    @property
+    def span(self) -> str:
+        first = self.pairs[-1].anchor.start_utc.date()
+        last = self.pairs[0].anchor.start_utc.date()
+        return f"{first}" if first == last else f"{first} → {last}"
+
+
+def action_batches(pairs: list[Pair]) -> list[Batch]:
     """Group the problems into batches of identical work, newest first.
 
     Every row in a batch needs the same decision, so deciding once and then
     working the list beats reasoning about each activity separately.
+    Actionable work first; "no gear anywhere" is bulk but needs no decision,
+    so it goes last however large it is.
     """
-    problems = [p for p in pairs if p.verdict in PROBLEM_VERDICTS]
-    if not problems:
-        return []
-
-    batches: dict[tuple[str, str, str], list[Pair]] = {}
-    for pair in problems:
+    grouped: dict[tuple[str, str, str], list[Pair]] = {}
+    for pair in pairs:
+        if pair.verdict not in PROBLEM_VERDICTS:
+            continue
         key = (
             pair.verdict,
             pair.garmin.gear_label if pair.garmin else "",
             pair.strava.gear_label if pair.strava else "",
         )
-        batches.setdefault(key, []).append(pair)
+        grouped.setdefault(key, []).append(pair)
 
-    decisions = sum(
-        1 for (verdict, _, _) in batches if priority_needed(verdict)
+    priority = {
+        DIFFERENT: 0,
+        MISSING_STRAVA: 1,
+        MISSING_GARMIN: 1,
+        NO_STRAVA_ACTIVITY: 2,
+        NO_GARMIN_ACTIVITY: 2,
+        MISSING_BOTH: 3,
+    }
+    order = sorted(
+        grouped.items(),
+        key=lambda kv: (priority.get(kv[0][0], 9), -len(kv[1]), kv[0]),
     )
-    actionable = sum(
-        len(g) for (verdict, _, _), g in batches.items() if priority_needed(verdict)
-    )
+    batches = []
+    for (verdict, garmin_gear, strava_gear), group in order:
+        group.sort(key=lambda p: p.anchor.start_utc, reverse=True)
+        batches.append(Batch(verdict, garmin_gear, strava_gear, group))
+    return batches
+
+
+def _action_plan(pairs: list[Pair]) -> list[str]:
+    batches = action_batches(pairs)
+    if not batches:
+        return []
+
+    decisions = sum(1 for b in batches if priority_needed(b.verdict))
+    actionable = sum(len(b.pairs) for b in batches if priority_needed(b.verdict))
     lines = [
         "",
         "## Action plan",
@@ -145,28 +182,12 @@ def _action_plan(pairs: list[Pair]) -> list[str]:
         "",
     ]
 
-    # Actionable work first; "no gear anywhere" is bulk but needs no decision,
-    # so it goes last however large it is.
-    priority = {
-        DIFFERENT: 0,
-        MISSING_STRAVA: 1,
-        MISSING_GARMIN: 1,
-        NO_STRAVA_ACTIVITY: 2,
-        NO_GARMIN_ACTIVITY: 2,
-        MISSING_BOTH: 3,
-    }
-    order = sorted(
-        batches.items(),
-        key=lambda kv: (priority.get(kv[0][0], 9), -len(kv[1]), kv[0]),
-    )
-    for index, ((verdict, garmin_gear, strava_gear), group) in enumerate(order, start=1):
-        group.sort(key=lambda p: p.anchor.start_utc, reverse=True)
-        first = group[-1].anchor.start_utc.date()
-        last = group[0].anchor.start_utc.date()
-        span = f"{first}" if first == last else f"{first} → {last}"
-
+    for index, batch in enumerate(batches, start=1):
+        verdict, garmin_gear, strava_gear, group = (
+            batch.verdict, batch.garmin_gear, batch.strava_gear, batch.pairs
+        )
         lines.append(f"### {index}. {VERDICT_LABELS[verdict]} — {len(group)} activit"
-                     f"{'y' if len(group) == 1 else 'ies'} ({span})")
+                     f"{'y' if len(group) == 1 else 'ies'} ({batch.span})")
         lines.append("")
 
         if verdict == DIFFERENT:

@@ -11,11 +11,12 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import webbrowser
 from dataclasses import asdict
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-from gearcheck import env_store, garmin_source, matching, report, strava_csv
+from gearcheck import env_store, garmin_source, html_report, matching, report, strava_csv
 from gearcheck.models import Activity
 from gearcheck.strava_source import StravaClient, StravaError
 
@@ -70,6 +71,11 @@ def parse_args() -> argparse.Namespace:
         "--problems-only",
         action="store_true",
         help="omit the full activity table from the markdown report",
+    )
+    parser.add_argument(
+        "--open",
+        action="store_true",
+        help="open the HTML report in your browser when done",
     )
     return parser.parse_args()
 
@@ -211,13 +217,18 @@ def main() -> None:
     stamp = f"{start}_to_{end}"
     csv_path = out_dir / f"gear_comparison_{stamp}.csv"
     md_path = out_dir / f"gear_comparison_{stamp}.md"
+    html_path = out_dir / f"gear_comparison_{stamp}.html"
 
     report.write_csv(pairs, csv_path)
     report.write_markdown(pairs, md_path, start, end, problems_only=args.problems_only)
+    html_report.write_html(pairs, html_path, start, end)
     report.print_summary(pairs)
 
     print(f"\nWrote {csv_path}")
     print(f"Wrote {md_path}")
+    print(f"Wrote {html_path}")
+    if args.open:
+        webbrowser.open(html_path.resolve().as_uri())
 
 
 if __name__ == "__main__":
