@@ -1,9 +1,13 @@
 """Pull running activities + their assigned gear from Garmin Connect.
 
 Auth: prompts for username/password interactively the first time, then reuses the
-cached session tokens (default ~/.garminconnect) on every later run. Credentials
-are held in memory only for the duration of the login call — never written to disk,
-never echoed.
+cached session tokens (default ~/.garminconnect) on every later run. The password
+is never echoed and never written anywhere by this module.
+
+Credentials can also come from GARMIN_EMAIL / GARMIN_PASSWORD, which skips the
+prompt. Those may be exported for one shell, or kept in the gitignored .env — in
+which case the password does sit in plaintext on disk, readable by anything
+running under the same account. See the README.
 """
 
 from __future__ import annotations
@@ -81,12 +85,12 @@ def connect(quiet: bool = False) -> Garmin:
         except Exception as exc:  # noqa: BLE001 - any failure means fall back to login
             print(f"Garmin: cached tokens unusable ({type(exc).__name__}), re-authenticating.")
 
-    print("\nGarmin Connect login (credentials are not stored anywhere).")
+    print("\nGarmin Connect login.")
 
-    # GARMIN_EMAIL / GARMIN_PASSWORD let the shell supply the credentials, which
-    # is the reliable way in on Git Bash: bash's `read -s` accepts pasted text,
-    # whereas Python's getpass has no real console there and drops it. The value
-    # stays in the shell's memory — nothing is written to disk either way.
+    # GARMIN_EMAIL / GARMIN_PASSWORD let the environment supply the credentials,
+    # from .env or exported for one shell. The shell route is also the reliable
+    # way in on Git Bash: bash's `read -s` accepts pasted text, whereas Python's
+    # getpass has no real console there and drops it.
     email = (os.getenv("GARMIN_EMAIL") or "").strip()
     password = os.getenv("GARMIN_PASSWORD") or ""
 
@@ -136,7 +140,10 @@ def connect(quiet: bool = False) -> Garmin:
 
     print(f"Garmin: logged in as {client.display_name}; tokens cached at {tokenstore}")
     if os.getenv("GARMIN_PASSWORD"):
-        print("  Tokens are cached now, so you can clear the variable: unset GARMIN_PASSWORD")
+        print(
+            "  Tokens are cached now, so the password won't be read again until they\n"
+            "  expire. If you exported it for this shell only: unset GARMIN_PASSWORD"
+        )
     return client
 
 
