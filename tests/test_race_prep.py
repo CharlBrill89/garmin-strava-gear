@@ -38,3 +38,15 @@ def test_halves_from_details_time_series():
     first, second = rp.halves_from_details(details)
     assert first["hr"] == pytest.approx(140)
     assert second["hr"] == pytest.approx(150)
+
+
+def test_weekly_rows_group_by_monday():
+    run = {"type": "running", "phase": "-", "max_hr": None, "elev": None}
+    runs = [
+        {**run, "date": "2026-10-05", "km": 10.0, "duration": 3000, "speed": 10000 / 3000, "hr": 150},
+        {**run, "date": "2026-10-11", "km": 5.0, "duration": 1500, "speed": 5000 / 1500, "hr": None},
+        {**run, "date": "2026-10-12", "km": 8.0, "duration": 2400, "speed": 8000 / 2400, "hr": 140},
+    ]
+    rows = rp.weekly_rows(runs)
+    assert rows[0].startswith("| 2026-10-05 | 2 | 15.0 | 10.0 | 5:00 | 150 | 1.33 |")
+    assert rows[1].startswith("| 2026-10-12 | 1 | 8.0 | 8.0 | 5:00 | 140 | 1.43 |")

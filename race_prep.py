@@ -6,6 +6,7 @@ each, and lists daily resting HR, overnight HRV and sleep. Prints Markdown
 tables and saves them to data/race_prep.md (gitignored: it's personal data).
 
     python race_prep.py --ill-from 2026-09-23
+    python race_prep.py --weeks 26     # six months of runs
 """
 
 from __future__ import annotations
@@ -140,8 +141,32 @@ def daily_markers(client, day: date) -> dict[str, Any]:
     return row
 
 
+def weekly_rows(runs: list[dict[str, Any]]) -> list[str]:
+    """One line per Monday-start week: volume, long run, pace, HR, efficiency."""
+    weeks: dict[date, list[dict[str, Any]]] = {}
+    for r in runs:
+        day = date.fromisoformat(r["date"])
+        weeks.setdefault(day - timedelta(days=day.weekday()), []).append(r)
+    rows = []
+    for monday in sorted(weeks):
+        group = weeks[monday]
+        km = sum(r["km"] for r in group)
+        secs = sum(r["duration"] for r in group)
+        with_hr = [r for r in group if r["hr"] and r["duration"]]
+        hr_secs = sum(r["duration"] for r in with_hr)
+        hr = sum(r["hr"] * r["duration"] for r in with_hr) / hr_secs if hr_secs else None
+        hr_speed = sum(r["km"] for r in with_hr) * 1000 / hr_secs if hr_secs else None
+        rows.append(f"| {monday} | {len(group)} | {km:.1f} | {max(r['km'] for r in group):.1f} | "
+                    f"{fmt_pace(km * 1000 / secs if secs else None)} | {fmt_num(hr)} | "
+                    f"{fmt_num(hr_speed * 60 / hr if hr else None, 2)} |")
+    return rows
+
+
 def build_report(runs: list[dict[str, Any]], days: list[dict[str, Any]], ill_from: date | None) -> str:
-    out = ["## Runs", "",
+    out = ["## Weekly summary", "",
+           "| Week of | Runs | km | Longest km | Avg pace | Avg HR | m/beat |",
+           "|---|---|---|---|---|---|---|", *weekly_rows(runs), "",
+           "## Runs", "",
            "| Date | Phase | Type | km | Pace /km | Avg HR | Max HR | Elev + m | m/beat | 1st half pace/HR | 2nd half pace/HR | Decoupling |",
            "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in runs:
@@ -186,7 +211,9 @@ def build_report(runs: list[dict[str, Any]], days: list[dict[str, Any]], ill_fro
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--weeks", type=int, default=8)
+    parser.add_argument("--weeks", type=int, default=8, help="weeks of runs to pull")
+    parser.add_argument("--recovery-weeks", type=int, default=8,
+                        help="weeks of daily resting HR/HRV/sleep (3 API calls per day)")
     parser.add_argument("--ill-from", type=date.fromisoformat,
                         help="first day of illness (YYYY-MM-DD); splits runs into pre/post")
     args = parser.parse_args()
@@ -221,10 +248,12 @@ def main() -> None:
         runs.append(run)
 
     days = []
-    for offset in range((end - start).days + 1):
-        days.append(daily_markers(client, start + timedelta(days=offset)))
+    recovery_start = end - timedelta(weeks=min(args.recovery_weeks, args.weeks))
+    total_days = (end - recovery_start).days + 1
+    for offset in range(total_days):
+        days.append(daily_markers(client, recovery_start + timedelta(days=offset)))
         time.sleep(0.2)
-        print(f"\r  recovery data {offset + 1}/{(end - start).days + 1}", end="", flush=True)
+        print(f"\r  recovery data {offset + 1}/{total_days}", end="", flush=True)
     print()
 
     report = build_report(runs, days, args.ill_from)
