@@ -80,11 +80,45 @@ Scopes requested: `read`, `activity:read_all` (so private runs are included) and
 `profile:read_all` (so shoe names can be resolved). Access tokens are refreshed
 automatically on later runs.
 
-### 2. Garmin — no setup needed
+### 2. Garmin — optional credential setup
 
-If the hidden password prompt won't accept a paste (common in Git Bash, where
-Python has no real console), let bash read it instead and pass it through the
-environment:
+Nothing is required: the scripts prompt for your email and password the first
+time and cache session tokens afterwards.
+
+To let *any* shell or editor session log in without a prompt, put the
+credentials in `.env`:
+
+```ini
+GARMIN_EMAIL=you@example.com
+GARMIN_PASSWORD=your-password
+```
+
+They are only read when the cached tokens are missing or expired. `.env` is
+gitignored and never committed, but it is a **plaintext file readable by
+anything running under your account** — a convenience, not a vault.
+
+**Where to put it.** The first of these that exists is used, for both reading
+and writing:
+
+| Order | Path |
+|---|---|
+| 1 | `$GEARCHECK_ENV`, if set |
+| 2 | `.env` in the repository root |
+| 3 | `.env` in the **main checkout**, when running from a git worktree |
+| 4 | `~/.gearcheck.env` |
+
+Rule 3 exists because tools that spawn git worktrees — Claude Code among them —
+run the code from a throwaway copy of the repo. An untracked `.env` never exists
+in that copy, and anything written to one is lost when the worktree is recycled,
+so credentials would appear to vanish between sessions. A worktree's `.git` is a
+file pointing back at the main checkout, so `env_store` follows it and one `.env`
+in the repository root serves every worktree.
+
+Rule 4 is the escape hatch if you keep several clones and want one shared file.
+
+To keep it off disk entirely, pass it for a single shell instead. This is also
+the fix when the hidden password prompt won't accept a paste (common in Git
+Bash, where Python has no real console):
 
 ```bash
 read -s -p "Garmin password: " GARMIN_PASSWORD && export GARMIN_PASSWORD && echo
