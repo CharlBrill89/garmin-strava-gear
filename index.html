@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Great Trek Pace Card</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  /* Layout: a printed pace band — hairline-ruled strips, no cards, big condensed numerals */
+  :root {
+    --bg: #f5f7f3;
+    --fg: #141c18;
+    --muted: #5b6a62;
+    --line: #dbe2db;
+    --rule: #141c18;
+    --hold: #1b645b;
+    --steady: #8a5e12;
+    --push: #b2412c;
+    --chip-fg: #ffffff;
+    --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+    --body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    --data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    color-scheme: light;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1411; --fg: #e9eee8; --muted: #8fa096; --line: #27312b; --rule: #e9eee8;
+      --hold: #5cc0b0; --steady: #d9a548; --push: #e4785c; --chip-fg: #0f1411;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1411; --fg: #e9eee8; --muted: #8fa096; --line: #27312b; --rule: #e9eee8;
+    --hold: #5cc0b0; --steady: #d9a548; --push: #e4785c; --chip-fg: #0f1411;
+    color-scheme: dark;
+  }
+  [hidden] { display: none !important; }
+
+  body {
+    margin: 0;
+    background: var(--bg); color: var(--fg); font-family: var(--body);
+    font-size: 15px; line-height: 1.5; -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 56px; }
+  h1, h2 { margin: 0; text-wrap: balance; }
+  p { margin: 0; }
+  .num { font-family: var(--data); font-variant-numeric: tabular-nums; }
+
+  .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .masthead { display: flex; flex-direction: column; gap: 6px; padding-bottom: 18px; }
+  .masthead h1 {
+    font-family: var(--display); font-weight: 700;
+    font-size: clamp(38px, 12vw, 56px); line-height: .95; letter-spacing: -.01em;
+  }
+  .goal { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 14px; color: var(--muted); }
+  .goal b { color: var(--fg); font-weight: 600; }
+
+  .tabs { display: flex; gap: 2px; border-top: 2px solid var(--rule); border-bottom: 1px solid var(--line); margin-bottom: 26px; }
+  .tabs button {
+    flex: 1; appearance: none; background: none; border: 0; border-bottom: 3px solid transparent;
+    margin-bottom: -1px; padding: 12px 4px; font-family: var(--body); font-size: 11.5px;
+    font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); cursor: pointer;
+  }
+  .tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--rule); }
+  .tabs button:focus-visible { outline: 2px solid var(--hold); outline-offset: -2px; }
+
+  .headline {
+    border-top: 2px solid var(--rule); border-bottom: 1px solid var(--line);
+    padding-block: 18px 20px; display: flex; flex-direction: column; gap: 4px;
+  }
+  .headline .big { font-family: var(--display); font-weight: 700; font-size: clamp(29px, 8.5vw, 40px); line-height: 1.02; }
+  .headline .big em { font-style: normal; color: var(--hold); }
+  .headline .big em.warn { color: var(--push); }
+  .headline p { font-size: 14px; color: var(--muted); max-width: 48ch; }
+
+  section { margin-top: 32px; }
+  .sechead {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    border-bottom: 2px solid var(--rule); padding-bottom: 7px; margin-bottom: 2px;
+  }
+  .sechead h2 { font-family: var(--display); font-weight: 600; font-size: 23px; }
+  .sechead span { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+
+  .seg { border-bottom: 1px solid var(--line); padding-block: 16px; display: grid; gap: 10px; }
+  .seg-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .seg-km { font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1; }
+  .seg-tag { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+  .grade { font-family: var(--data); font-size: 12px; font-weight: 600; color: var(--muted); }
+  .down .seg-tag, .down .cap { color: var(--hold); }
+  .up .seg-tag, .up .cap { color: var(--push); }
+  .flat .seg-tag, .flat .cap { color: var(--steady); }
+  .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
+  .field { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .field .k { font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .field .v { font-family: var(--data); font-weight: 600; font-size: 17px; font-variant-numeric: tabular-nums; }
+  .field .v.cap { font-size: 21px; }
+  .zonerule { font-size: 13.5px; color: var(--muted); }
+  .zonerule b { color: var(--fg); font-weight: 600; }
+
+  .scroller { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 10px 9px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--rule); white-space: nowrap; }
+  td.n, th.n { font-family: var(--data); font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: 0; }
+  .splits td.n { font-weight: 600; font-size: 15px; }
+  .splits td.old { font-weight: 500; color: var(--muted); }
+  .splits tr.finish td { border-top: 2px solid var(--rule); border-bottom: 0; }
+  .splits td:first-child { font-weight: 600; }
+  .trace td.up { color: var(--push); }
+  .trace td.down { color: var(--hold); }
+  .where { display: block; font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: .02em; }
+
+  .gate { border-bottom: 1px solid var(--line); padding-block: 14px; display: grid; gap: 4px; }
+  .gate .cond { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .gate .hr { font-family: var(--data); font-weight: 600; font-size: 16px; }
+  .chip { display: inline-block; padding: 2px 9px; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--chip-fg); }
+  .chip.go { background: var(--hold); }
+  .chip.ease { background: var(--steady); }
+  .chip.stop { background: var(--push); }
+  .gate p { font-size: 13.5px; color: var(--muted); }
+
+  .note { padding-block: 13px; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .note:last-child { border-bottom: 0; }
+  .note b { font-weight: 600; }
+  .note .lead { font-family: var(--display); font-weight: 600; font-size: 18px; display: block; margin-bottom: 3px; }
+  ul { margin: 6px 0 0; padding-left: 18px; }
+  li { margin-bottom: 4px; }
+  li::marker { color: var(--muted); }
+
+  .callout { border-left: 3px solid var(--push); padding: 12px 0 12px 14px; margin-top: 16px; font-size: 14px; }
+  .callout b { color: var(--push); }
+  .callout.calm { border-left-color: var(--hold); }
+  .callout.calm b { color: var(--hold); }
+
+  .foot { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="masthead">
+    <span class="eyebrow">Sat 24 Oct 2026 · 8:30 · UBC Vancouver</span>
+    <h1>Great Trek Half</h1>
+    <div class="goal">
+      <span>PB <b class="num">1:49:49</b> (2024)</span>
+      <span>Target <b class="num">1:48:28</b></span>
+      <span>Likely <b class="num">1:46–1:54</b></span>
+    </div>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button id="tab-race" role="tab" aria-controls="panel-race" aria-selected="true">Race day</button>
+    <button id="tab-prep" role="tab" aria-controls="panel-prep" aria-selected="false">Before</button>
+    <button id="tab-course" role="tab" aria-controls="panel-course" aria-selected="false">Course</button>
+  </div>
+
+  <div id="panel-race" role="tabpanel" aria-labelledby="tab-race">
+
+    <div class="headline">
+      <span class="eyebrow">What the course does to you</span>
+      <span class="big">Two long drags. <em class="warn">The second one decides it.</em></span>
+      <p>Each loop drops hard in a single kilometre, runs low for two, then climbs back to campus over four or five at a gentle 0.8%. Nothing here is steep. Everything here is long. In 2024 you banked time early and gave back 71 seconds in the second half.</p>
+    </div>
+
+    <section>
+      <div class="sechead"><h2>Five segments</h2><span>By gradient</span></div>
+
+      <div class="flat seg">
+        <div class="seg-top"><span class="seg-km">0–3 km</span><span class="seg-tag">Plateau · settle</span></div>
+        <span class="grade">flat to km 2, then −29 m in km 3</span>
+        <div class="pair">
+          <div class="field"><span class="k">Pace — Plan A</span><span class="v">5:08</span></div>
+          <div class="field"><span class="k">Pace — Plan B</span><span class="v">5:11</span></div>
+          <div class="field"><span class="k">HR target</span><span class="v">152–158</span></div>
+          <div class="field"><span class="k">HR cap</span><span class="v cap">160</span></div>
+        </div>
+        <p class="zonerule">In 2024 you were at HR 160 by km 2 and 162 by km 3. <b>That was the race's one real mistake.</b> The drop at km 3 will feel like free speed — take it at the same effort, not the same heart rate.</p>
+      </div>
+
+      <div class="down seg">
+        <div class="seg-top"><span class="seg-km">3–6 km</span><span class="seg-tag">Low · roll</span></div>
+        <span class="grade">69–75 m, the lowest ground on the course</span>
+        <div class="pair">
+          <div class="field"><span class="k">Pace — Plan A</span><span class="v">5:05</span></div>
+          <div class="field"><span class="k">Pace — Plan B</span><span class="v">5:08</span></div>
+          <div class="field"><span class="k">HR target</span><span class="v">158–163</span></div>
+          <div class="field"><span class="k">HR cap</span><span class="v cap">165</span></div>
+        </div>
+        <p class="zonerule">Flat and fast along the water. Let the pace come to you here — you have a five-kilometre drag starting at km 6.</p>
+      </div>
+
+      <div class="up seg">
+        <div class="seg-top"><span class="seg-km">6–10 km</span><span class="seg-tag">Climb 1 · steady</span></div>
+        <span class="grade">+42 m over 5 km · 0.8% · 2024: 5:19 /km</span>
+        <div class="pair">
+          <div class="field"><span class="k">Pace — Plan A</span><span class="v">5:20</span></div>
+          <div class="field"><span class="k">Pace — Plan B</span><span class="v">5:24</span></div>
+          <div class="field"><span class="k">HR target</span><span class="v">163–167</span></div>
+          <div class="field"><span class="k">HR cap</span><span class="v cap">169</span></div>
+        </div>
+        <p class="zonerule">Gentle enough that <b>HR is a reliable guide here</b> — it only lags on short steep pitches, and this is neither. Hold the cap, let the pace sit 12–15 s/km slower, and do not argue with it. <b>Read the rolling average, not the instant number.</b></p>
+      </div>
+
+      <div class="down seg">
+        <div class="seg-top"><span class="seg-km">10–17 km</span><span class="seg-tag">The money stretch</span></div>
+        <span class="grade">net −32 m, with −26 m in km 14 alone</span>
+        <div class="pair">
+          <div class="field"><span class="k">Pace — Plan A</span><span class="v">4:59</span></div>
+          <div class="field"><span class="k">Pace — Plan B</span><span class="v">5:03</span></div>
+          <div class="field"><span class="k">HR target</span><span class="v">164–168</span></div>
+          <div class="field"><span class="k">HR cap</span><span class="v cap">169</span></div>
+        </div>
+        <p class="zonerule"><b>Seven kilometres, and the only cheap speed on the course.</b> In 2024 you ran this at 5:10. Km 14 is the big drop — that one kilometre should be your fastest of the day.</p>
+      </div>
+
+      <div class="up seg">
+        <div class="seg-top"><span class="seg-km">17–21.1 km</span><span class="seg-tag">Climb 2 · everything</span></div>
+        <span class="grade">+31 m · km 18 is +17 m, the steepest of the race</span>
+        <div class="pair">
+          <div class="field"><span class="k">Pace — Plan A</span><span class="v">5:16</span></div>
+          <div class="field"><span class="k">Pace — Plan B</span><span class="v">5:19</span></div>
+          <div class="field"><span class="k">HR target</span><span class="v">168–174</span></div>
+          <div class="field"><span class="k">HR ceiling</span><span class="v cap">released</span></div>
+        </div>
+        <p class="zonerule">No cap. You hit 172 with a max of 176 on this climb in 2024 and still finished strong. <b>Threshold is 169; above it you have about 20 minutes, and 20 minutes is all that is left.</b></p>
+      </div>
+    </section>
+
+    <section>
+      <div class="sechead"><h2>Splits</h2><span>Cumulative</span></div>
+      <div class="scroller">
+        <table class="splits">
+          <thead><tr><th>Marker</th><th class="n">Plan A</th><th class="n">Plan B</th></tr></thead>
+          <tbody>
+            <tr><td>3 km<span class="where">foot of the drop</span></td><td class="n">15:24</td><td class="n">15:33</td></tr>
+            <tr><td>5 km</td><td class="n">25:34</td><td class="n">25:49</td></tr>
+            <tr><td>6 km<span class="where">climb 1 starts</span></td><td class="n">30:39</td><td class="n">30:57</td></tr>
+            <tr><td>10 km<span class="where">top · decision point</span></td><td class="n">51:59</td><td class="n">52:33</td></tr>
+            <tr><td>14 km<span class="where">the big drop</span></td><td class="n">1:11:55</td><td class="n">1:12:45</td></tr>
+            <tr><td>17 km<span class="where">climb 2 starts</span></td><td class="n">1:26:52</td><td class="n">1:27:54</td></tr>
+            <tr><td>20 km</td><td class="n">1:42:40</td><td class="n">1:43:51</td></tr>
+            <tr class="finish"><td>Finish</td><td class="n">1:48:28</td><td class="n">1:49:41</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout">
+        <b>Run to the painted markers, not the watch.</b> In 2024 your watch read 21.43 km against a 21.0975 km course — 1.5% long, which by the end put its "km 19" at the real km 18.7. Every split on this card is course distance.
+      </div>
+      <div class="callout calm">
+        <b>Plan A is slower than 2024 for the first 10 km. That is the design.</b> You were through 10 km in roughly 52:20 two years ago and paid for it from km 17. Plan A gives that back and takes it from the money stretch instead, where it costs nothing.
+      </div>
+    </section>
+
+    <section>
+      <div class="sechead"><h2>Decision at 10 km</h2><span>Top of climb 1</span></div>
+      <div class="gate">
+        <div class="cond"><span class="chip go">Plan A holds</span><span class="hr">HR ≤ 166</span></div>
+        <p>On 51:59 and breathing under control at the top. Press the money stretch.</p>
+      </div>
+      <div class="gate">
+        <div class="cond"><span class="chip ease">Drop to Plan B</span><span class="hr">HR 167–170</span></div>
+        <p>You climbed too hard. Use km 11–13 to bring HR back to 165, then hold Plan B. Still a PB.</p>
+      </div>
+      <div class="gate">
+        <div class="cond"><span class="chip stop">Fallback</span><span class="hr">HR ≥ 171</span></div>
+        <p>At threshold with 11 km and a four-kilometre drag still to come. Ease to 5:25–5:35 and HR ≤165 through 17 km, then spend what is left. Lands 1:52–1:54. Climb 2 will end you otherwise.</p>
+      </div>
+    </section>
+
+    <section>
+      <div class="sechead"><h2>The drags</h2><span>Both climbs</span></div>
+      <div class="note">
+        <span class="lead">These are not hills</span>
+        Climb 1 is 5 km at 0.8%; climb 2 is 4 km. There is no pitch steep enough to make HR lag, so <b>pace by HR and let the pace do what it does.</b> Losing 12–15 s/km on a drag this long is correct, not a failure.
+      </div>
+      <div class="note">
+        <span class="lead">The spike you feel is not the one that counts</span>
+        On a 2.5–3% pitch your HR jumps 10–17 bpm within a few hundred metres. These drags are 0.8%, so expect nearer <b>+3 to +5</b>. Across 111 of your kilometre laps the relationship is only +1.8 bpm per 1% of gradient, because you already slow by about 5 s/km per 1% without thinking about it. <b>Brushing 170 as you crest something is nothing; sitting at 170 for three minutes is the problem.</b> Judge it on the rolling average.
+      </div>
+      <div class="note">
+        <span class="lead">Climb 1 is the rehearsal</span>
+        Km 6–10 tells you exactly how km 17–21 will feel, seven kilometres before it counts. Read it honestly at the 10 km gate.
+      </div>
+      <div class="note">
+        <span class="lead">Km 14 is the one free kilometre</span>
+        A 26 m drop in a single kilometre. Let it run — it should be your fastest split of the day and it costs almost nothing.
+      </div>
+      <div class="note">
+        <span class="lead">Short stride on both drops</span>
+        Km 3 and km 14 are where your quads get the bill. Reaching out downhill multiplies the braking force they absorb, and that is what is burning at the end of your runs. <b>Quick turnover, short stride, stay relaxed</b> — let gravity do it rather than catching yourself. You want those legs intact for the climb at 17.
+      </div>
+      <div class="note">
+        <span class="lead">Km 18 is the crisis</span>
+        The steepest kilometre of the race, +17 m, with 18 km in your legs. Your slowest 2024 split landed exactly here. Expect it to hurt, know it is one kilometre, and know that in 2024 you still came home at 5:11.
+      </div>
+    </section>
+
+    <section>
+      <div class="sechead"><h2>If HR looks wrong</h2><span>Still post-viral</span></div>
+      <div class="note">
+        Two weeks out from a three-week illness, HR can misreport either way — commonly 5–10 bpm high at a given pace, occasionally blunted and low while you feel awful.
+        <ul>
+          <li><b>High HR at easy effort</b> → trust the HR, back off.</li>
+          <li><b>Low HR but laboured breathing</b> → trust the breathing, back off.</li>
+        </ul>
+        Asymmetric on purpose: whichever signal says slow down wins.
+      </div>
+    </section>
+
+    <section>
+      <div class="sechead"><h2>Race morning</h2><span>8:30 start</span></div>
+      <div class="scroller">
+        <table>
+          <tbody>
+            <tr><td class="n">05:30</td><td>Up. Familiar breakfast, nothing new. Caffeine if you normally have it.</td></tr>
+            <tr><td class="n">07:15</td><td>Arrive, bag drop, toilet queue is longer than you think.</td></tr>
+            <tr><td class="n">08:05</td><td>Warm-up: 8–10 min easy jog, 3 × 20 s strides. Keep it short — you are still recovering, and the first two kilometres are flat.</td></tr>
+            <tr><td class="n">08:20</td><td>Corral. GPS locked, HR alert armed at 161.</td></tr>
+            <tr><td class="n">08:30</td><td>Go, from East Mall. Finish is at the Nest, not where you started.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note">
+        <span class="lead">Watch setup, done the night before</span>
+        <ul>
+          <li>1 km auto-lap</li>
+          <li>One screen: lap pace, HR, distance, elapsed time</li>
+          <li>High-HR alert at 161 — for the first 6 km only, ignore it after</li>
+          <li>Charged</li>
+        </ul>
+      </div>
+      <div class="note">
+        <span class="lead">Kit</span>
+        Vancouver late October at 8:30 is typically 6–11 °C and often wet — check the forecast, then dress for about 10 °C warmer than it feels standing around. Singlet or light long sleeve, cheap gloves you can bin, cap if raining, throwaway layer for the start. Shoes you have already run in.
+      </div>
+      <div class="note">
+        <span class="lead">Fuel and drink</span>
+        Breakfast 2.5–3 hours before. One gel around km 14–15, after the drop and before climb 2, <b>only if you have practised with it</b>. Drink to thirst; the course has aid roughly every 2.5 km, and a cup near km 10 and km 16 is plenty in cool weather.
+      </div>
+    </section>
+  </div>
+
+  <div id="panel-prep" role="tabpanel" aria-labelledby="tab-prep" hidden>
+
+    <div class="headline">
+      <span class="eyebrow">Eleven days</span>
+      <span class="big">You cannot gain fitness now. <em>You can lose the race.</em></span>
+      <p>Everything below exists to confirm you are recovered, not to make you fitter. If a night goes badly, drop the run and keep the sleep.</p>
+    </div>
+
+    <section>
+      <div class="sechead"><h2>Taper</h2><span>13–24 Oct</span></div>
+      <div class="scroller">
+        <table>
+          <thead><tr><th>Day</th><th>Session</th></tr></thead>
+          <tbody>
+            <tr><td class="n">Tue 13</td><td>Done — 7.6 km easy, your best efficiency reading in six months</td></tr>
+            <tr><td class="n">Wed 14</td><td>Rest, or 30 min very easy, HR ≤145</td></tr>
+            <tr><td class="n">Thu 15</td><td>6–8 km easy, HR ≤148</td></tr>
+            <tr><td class="n">Fri 16</td><td>Rest</td></tr>
+            <tr><td class="n">Sat 17</td><td><b>The gate.</b> 10–12 km easy-steady, HR ≤150. Run the course if you can — the climbs are long gentle drags and worth feeling once</td></tr>
+            <tr><td class="n">Sun 18</td><td>Rest</td></tr>
+            <tr><td class="n">Mon 19</td><td><b>Only if Saturday passed.</b> 2 km WU, 3 × 2 km @ 5:00–5:06 (HR 164–168), 3 min jog, 1.5 km CD — on a gentle rise if you can find one</td></tr>
+            <tr><td class="n">Tue 20</td><td>Rest</td></tr>
+            <tr><td class="n">Wed 21</td><td>6 km easy</td></tr>
+            <tr><td class="n">Thu 22</td><td>5 km very easy + 3 × 30 s strides</td></tr>
+            <tr><td class="n">Fri 23</td><td>Rest, or 20 min shakeout</td></tr>
+            <tr><td class="n">Sat 24</td><td><b>Race</b></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <div class="sechead"><h2>Saturday's gate</h2><span>HR at 5:40–5:50 /km</span></div>
+      <div class="gate">
+        <div class="cond"><span class="chip go">Recovered</span><span class="hr">HR 147–152</span></div>
+        <p>Your normal range at that pace. Do Monday's full session and race Plan A.</p>
+      </div>
+      <div class="gate">
+        <div class="cond"><span class="chip ease">Borderline</span><span class="hr">HR 153–156</span></div>
+        <p>Do Monday's session but only 2 × 2 km, and race Plan B.</p>
+      </div>
+      <div class="gate">
+        <div class="cond"><span class="chip stop">Not recovered</span><span class="hr">HR 157+</span></div>
+        <p>Skip Monday entirely and taper straight through. Race by feel with the fallback caps. Losing the session costs you nothing; doing it post-viral costs you the race.</p>
+      </div>
+    </section>
+
+    <section>
+      <div class="sechead"><h2>Watch for</h2><span>Race week</span></div>
+      <div class="note"><b>Resting HR ≥ 55</b> — your October average is 51 and falling. A jump back up means the illness is not done.</div>
+      <div class="note"><b>HRV status LOW for 3+ days</b> — unbalanced is where you have been and is survivable. Low is not.</div>
+      <div class="note"><b>Easy-run HR up at the same pace</b> — your most reliable signal, and the one Saturday tests.</div>
+      <div class="note"><b>Sleep</b> — scores went 86 → 75 → 67 → 61 over four nights. With a new baby this is the hardest to fix and the most likely to decide the day. Protect the two nights before the race, not just the last one.</div>
+    </section>
+
+    <section>
+      <div class="sechead"><h2>Do not race if</h2></div>
+      <div class="callout">
+        <b>Fever returns, chest pain or tightness, unusual breathlessness, or a racing or skipping heart at easy effort.</b> Any of those and you see a doctor rather than start. You trained through three weeks of illness; running hard through a febrile viral illness is the one scenario here where the downside is not just a slow time.
+      </div>
+    </section>
+  </div>
+
+  <div id="panel-course" role="tabpanel" aria-labelledby="tab-course" hidden>
+
+    <div class="headline">
+      <span class="eyebrow">2026 route vs your 2024 race</span>
+      <span class="big">99% the same course. <em>Two detours of 170 m.</em></span>
+      <p>330 of the 332 official route points sit within 30 m of the line you ran in 2024. The construction reroute appears once per loop, around km 9.4 and km 19.6, never more than 159 m off the old road. Your 2024 race file still describes this course.</p>
+    </div>
+
+    <section>
+      <div class="sechead"><h2>Profile</h2><span>+155 m · 65–111 m</span></div>
+      <div class="scroller">
+        <table class="trace">
+          <thead><tr><th>km</th><th class="n">Elev</th><th class="n">Net</th><th>Terrain</th></tr></thead>
+          <tbody>
+            <tr><td>1–2</td><td class="n">98–102</td><td class="n">0</td><td>campus plateau</td></tr>
+            <tr><td>3</td><td class="n">102 → 73</td><td class="n down">−29</td><td>the drop</td></tr>
+            <tr><td>4–5</td><td class="n">69–75</td><td class="n down">−4</td><td>low, rolling</td></tr>
+            <tr><td>6–10</td><td class="n">69 → 110</td><td class="n up">+42</td><td>climb 1 · 0.8%</td></tr>
+            <tr><td>11–13</td><td class="n">110 → 102</td><td class="n down">−8</td><td>high, rolling</td></tr>
+            <tr><td>14</td><td class="n">102 → 76</td><td class="n down">−26</td><td>the drop again</td></tr>
+            <tr><td>15–16</td><td class="n">76–78</td><td class="n up">+2</td><td>low</td></tr>
+            <tr><td>17–21</td><td class="n">78 → 109</td><td class="n up">+31</td><td>climb 2 · km 18 is +17</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout calm">
+        <b>Built from your own barometer.</b> The official GPX carries the route but all its elevation values are zero, so this profile comes from mapping your 2024 altimeter data onto the 2026 line — real measured elevation, aligned to the painted kilometre markers rather than to your watch's 1.5% over-measurement.
+      </div>
+    </section>
+
+    <section>
+      <div class="sechead"><h2>Then vs now</h2><span>10 weeks pre-race</span></div>
+      <div class="scroller">
+        <table>
+          <thead><tr><th></th><th class="n">2024</th><th class="n">2026</th></tr></thead>
+          <tbody>
+            <tr><td>Runs</td><td class="n">17</td><td class="n">~38</td></tr>
+            <tr><td>Weekly volume</td><td class="n">~15 km</td><td class="n">~28 km</td></tr>
+            <tr><td>Longest gap</td><td class="n">5 weeks</td><td class="n">none</td></tr>
+            <tr><td>Longest run</td><td class="n">14.0 km</td><td class="n">18.0 km</td></tr>
+            <tr><td>7.6 km easy run</td><td class="n">5:41 @ 147</td><td class="n">5:20 @ 151</td></tr>
+            <tr><td>m/beat on it</td><td class="n">1.20</td><td class="n">1.24</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout calm">
+        <b>You ran 1:49:49 off fifteen kilometres a week</b>, with a five-week hole in the middle and a longest run of 14 km. You are at nearly double that now, more efficient, and unbroken. That is the whole case for the PR.
+      </div>
+    </section>
+
+    <section>
+      <div class="sechead"><h2>Your numbers</h2><span>From Garmin</span></div>
+      <div class="scroller">
+        <table>
+          <tbody>
+            <tr><td>Lactate threshold HR</td><td class="n">169</td><td>1 Oct 2026, mid-illness — likely higher now</td></tr>
+            <tr><td>Max HR observed</td><td class="n">181</td><td>7 Jun 2026</td></tr>
+            <tr><td>Race max, this course</td><td class="n">176</td><td>climb 2, 2024</td></tr>
+            <tr><td>Race average, 2024</td><td class="n">164</td><td>for 1:49:49</td></tr>
+            <tr><td>VO2max</td><td class="n">51.2</td><td>13 Oct 2026</td></tr>
+            <tr><td>Zones</td><td class="n">Z3 155–164<br>Z4 165–172<br>Z5 173+</td><td>absolute bpm</td></tr>
+            <tr><td>Sub-1:50</td><td class="n">~60%</td><td>PR, sub-1:49:49: ~55%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <p class="foot">Built from the official 2026 course GPX, your 2024 race file, 66 runs and 85 days of recovery data from 14 Apr – 13 Oct 2026.</p>
+</div>
+
+<script>
+  (function () {
+    var tabs = [
+      { btn: document.getElementById('tab-race'), panel: document.getElementById('panel-race'), hash: 'race' },
+      { btn: document.getElementById('tab-prep'), panel: document.getElementById('panel-prep'), hash: 'prep' },
+      { btn: document.getElementById('tab-course'), panel: document.getElementById('panel-course'), hash: 'course' }
+    ];
+
+    function select(index) {
+      tabs.forEach(function (t, i) {
+        var on = i === index;
+        t.btn.setAttribute('aria-selected', on ? 'true' : 'false');
+        t.panel.hidden = !on;
+      });
+    }
+
+    tabs.forEach(function (t, i) {
+      t.btn.addEventListener('click', function () {
+        select(i);
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      });
+    });
+
+    var hash = (window.location.hash || '').replace('#', '');
+    tabs.forEach(function (t, i) { if (t.hash === hash) select(i); });
+  })();
+</script>
+
+</body>
+</html>
