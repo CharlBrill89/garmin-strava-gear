@@ -149,7 +149,8 @@
   tr.is-past td { color: var(--muted); }
   tr.past-toggle td { padding-block: 10px; }
   .route.collapsed { padding-block: 12px; gap: 2px; }
-  .route.collapsed > :not(.seg-top):not(h3), .route.collapsed .seg-tag { display: none; }
+  .seg-right { display: flex; align-items: baseline; gap: 6px 14px; flex-wrap: wrap; justify-content: flex-end; }
+  .route.collapsed > :not(.seg-top):not(h3) { display: none; }
   .route.collapsed .seg-km { font-size: 22px; color: var(--muted); }
   .route.collapsed h3 { font-size: 17px; color: var(--muted); }
 
@@ -609,19 +610,26 @@
       rows[0].parentNode.insertBefore(tr, rows[0]);
     }
 
-    Array.prototype.filter.call(document.querySelectorAll('.route[data-day]'), isPast).forEach(function (card) {
-      card.classList.add('collapsed');
+    // Every route card gets a toggle; past ones start collapsed.
+    Array.prototype.forEach.call(document.querySelectorAll('.route[data-day]'), function (card) {
+      var prefix = isPast(card) ? 'Done · ' : '';
       var btn = document.createElement('button');
       btn.className = 'toggle';
       btn.type = 'button';
-      btn.setAttribute('aria-expanded', 'false');
-      btn.textContent = 'Done · show';
-      btn.addEventListener('click', function () {
-        var open = card.classList.toggle('collapsed') === false;
+      function render() {
+        var open = !card.classList.contains('collapsed');
         btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-        btn.textContent = open ? 'Done · hide' : 'Done · show';
-      });
-      card.querySelector('.seg-top').appendChild(btn);
+        btn.textContent = prefix + (open ? 'hide' : 'show');
+      }
+      if (prefix) card.classList.add('collapsed');
+      btn.addEventListener('click', function () { card.classList.toggle('collapsed'); render(); });
+      render();
+      var top = card.querySelector('.seg-top');
+      var right = document.createElement('span');
+      right.className = 'seg-right';
+      right.appendChild(top.querySelector('.seg-tag'));
+      right.appendChild(btn);
+      top.appendChild(right);
     });
   })();
 </script>
