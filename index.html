@@ -139,6 +139,20 @@
   .up .prof .hl { stroke: var(--push); }
   .flat .prof .hl { stroke: var(--steady); }
   .prof .km10 { stroke: var(--line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+  /* Past sessions: collapsed to a single line once their day is over */
+  .toggle {
+    appearance: none; background: none; border: 0; padding: 0; cursor: pointer;
+    font-family: var(--body); font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted); text-decoration: underline; text-underline-offset: 3px;
+  }
+  .toggle:focus-visible { outline: 2px solid var(--hold); outline-offset: 2px; }
+  tr.is-past td { color: var(--muted); }
+  tr.past-toggle td { padding-block: 10px; }
+  .route.collapsed { padding-block: 12px; gap: 2px; }
+  .route.collapsed > :not(.seg-top):not(h3), .route.collapsed .seg-tag { display: none; }
+  .route.collapsed .seg-km { font-size: 22px; color: var(--muted); }
+  .route.collapsed h3 { font-size: 17px; color: var(--muted); }
+
   .glink { font-size: 13px; font-weight: 600; color: var(--fg); text-underline-offset: 3px; justify-self: start; }
 
   .callout { border-left: 3px solid var(--push); padding: 12px 0 12px 14px; margin-top: 16px; font-size: 14px; }
@@ -370,18 +384,18 @@
         <table>
           <thead><tr><th>Day</th><th>Session</th></tr></thead>
           <tbody>
-            <tr><td class="n">Tue 13</td><td>Done — 7.6 km easy, your best efficiency reading in six months</td></tr>
-            <tr><td class="n">Wed 14</td><td>Rest, or 30 min very easy, HR ≤145</td></tr>
-            <tr><td class="n">Thu 15</td><td>6–8 km easy, HR ≤148</td></tr>
-            <tr><td class="n">Fri 16</td><td>Rest</td></tr>
-            <tr><td class="n">Sat 17</td><td><b>The gate.</b> 10–12 km easy-steady, HR ≤150. Run the course if you can — the climbs are long gentle drags and worth feeling once</td></tr>
-            <tr><td class="n">Sun 18</td><td>Rest</td></tr>
-            <tr><td class="n">Mon 19</td><td><b>Only if Saturday passed.</b> 2 km WU, 3 × 2 km @ 5:00–5:06 (HR 164–168), 3 min jog, 1.5 km CD — on a gentle rise if you can find one</td></tr>
-            <tr><td class="n">Tue 20</td><td>Rest</td></tr>
-            <tr><td class="n">Wed 21</td><td>6 km easy</td></tr>
-            <tr><td class="n">Thu 22</td><td>5 km very easy + 3 × 30 s strides</td></tr>
-            <tr><td class="n">Fri 23</td><td>Rest, or 20 min shakeout</td></tr>
-            <tr><td class="n">Sat 24</td><td><b>Race</b></td></tr>
+            <tr data-day="2026-10-13"><td class="n">Tue 13</td><td>Done — 7.6 km easy, your best efficiency reading in six months</td></tr>
+            <tr data-day="2026-10-14"><td class="n">Wed 14</td><td>Rest, or 30 min very easy, HR ≤145</td></tr>
+            <tr data-day="2026-10-15"><td class="n">Thu 15</td><td>6–8 km easy, HR ≤148</td></tr>
+            <tr data-day="2026-10-16"><td class="n">Fri 16</td><td>Rest</td></tr>
+            <tr data-day="2026-10-17"><td class="n">Sat 17</td><td><b>The gate.</b> 10–12 km easy-steady, HR ≤150. Run the course if you can — the climbs are long gentle drags and worth feeling once</td></tr>
+            <tr data-day="2026-10-18"><td class="n">Sun 18</td><td>Rest</td></tr>
+            <tr data-day="2026-10-19"><td class="n">Mon 19</td><td><b>Only if Saturday passed.</b> 2 km WU, 3 × 2 km @ 5:00–5:06 (HR 164–168), 3 min jog, 1.5 km CD — on a gentle rise if you can find one</td></tr>
+            <tr data-day="2026-10-20"><td class="n">Tue 20</td><td>Rest</td></tr>
+            <tr data-day="2026-10-21"><td class="n">Wed 21</td><td>6 km easy</td></tr>
+            <tr data-day="2026-10-22"><td class="n">Thu 22</td><td>5 km very easy + 3 × 30 s strides</td></tr>
+            <tr data-day="2026-10-23"><td class="n">Fri 23</td><td>Rest, or 20 min shakeout</td></tr>
+            <tr data-day="2026-10-24"><td class="n">Sat 24</td><td><b>Race</b></td></tr>
           </tbody>
         </table>
       </div>
@@ -405,7 +419,7 @@
 
     <section>
       <div class="sechead"><h2>Where to run them</h2><span>From your Garmin history</span></div>
-      <div class="flat seg route">
+      <div class="flat seg route" data-day="2026-10-15">
         <div class="seg-top"><span class="seg-km">Thu 15</span><span class="seg-tag">Flattest loop you run</span></div>
         <span class="grade">6–8 km easy · HR ≤148</span>
         <h3>The 7 km home loop</h3>
@@ -414,7 +428,7 @@
         <p class="zonerule">The same loop you ran yesterday, and the one with the least climbing of all your regular routes. Yesterday's 147 was right on today's cap, so run it a touch easier. If HR is <b>higher than yesterday at the same pace</b>, that matters more than anything else this week.</p>
         <a class="glink" href="https://connect.garmin.com/modern/activity/24727789044" target="_blank" rel="noopener">Open the 14 Oct run in Garmin</a>
       </div>
-      <div class="up seg route">
+      <div class="up seg route" data-day="2026-10-17">
         <div class="seg-top"><span class="seg-km">Sat 17</span><span class="seg-tag">Same ground as 19 Sep</span></div>
         <span class="grade">The gate · 10–12 km · HR ≤150</span>
         <h3>East Maple Ridge, out and back</h3>
@@ -423,7 +437,7 @@
         <p class="zonerule"><b>This is the gate run.</b> The first 5.6 km of your 19 Sep run, then turn and come back the same way. Most of the way out is uphill, about 1.8% for the first 3 km, which is steeper than anything on the course. <b>Judge the gate on the way out only</b> (km 0–4.8, highlighted). On 19 Sep, four days before you got ill, you ran that stretch at 5:37 with HR 151. If you run it at 5:40–5:50, the gate bands above still apply. The way home is mostly downhill, so HR will read low there; leave it out.</p>
         <a class="glink" href="https://connect.garmin.com/modern/activity/24424614830" target="_blank" rel="noopener">Open the 19 Sep run in Garmin</a><p class="zonerule">To follow it on your watch, import the 11.5 km out-and-back GPX as a course, or follow the 19 Sep route and turn at km 5.6.</p>
       </div>
-      <div class="up seg route">
+      <div class="up seg route" data-day="2026-10-19">
         <div class="seg-top"><span class="seg-km">Mon 19</span><span class="seg-tag">Closest thing to the course</span></div>
         <span class="grade">3 × 2 km @ 5:00–5:06 · if the gate passed</span>
         <h3>The 2 km drag north</h3>
@@ -432,7 +446,7 @@
         <p class="zonerule">The highlighted stretch, km 1.5–3.5 of your 21 Aug run: a steady 0.9% that matches the race's two drags almost exactly. Start it 800 m west of home. <b>Rep 1 up, rep 2 back down, rep 3 up</b>, 3 min jog at each end. Hold 5:00–5:06 on all three — on rep 2, resist the free speed, as you will at km 3 and 14. Rep 3 ends at the top, about 1.5 km from your door: that is the cool-down.</p>
         <a class="glink" href="https://connect.garmin.com/modern/activity/24061686853" target="_blank" rel="noopener">Open the 21 Aug run in Garmin</a>
       </div>
-      <div class="flat seg route">
+      <div class="flat seg route" data-day="2026-10-21">
         <div class="seg-top"><span class="seg-km">Wed 21</span><span class="seg-tag">Your most-run route</span></div>
         <span class="grade">6 km easy</span>
         <h3>The 6 km loop</h3>
@@ -441,7 +455,7 @@
         <p class="zonerule">Five runs on it since May, so it is the easiest place to notice if something is off. Easy, no target pace. If HR sits well above 149 at the same pace, that is the warning sign listed under Watch for, below.</p>
         <a class="glink" href="https://connect.garmin.com/modern/activity/24657578808" target="_blank" rel="noopener">Open the 8 Oct run in Garmin</a>
       </div>
-      <div class="flat seg route">
+      <div class="flat seg route" data-day="2026-10-22">
         <div class="seg-top"><span class="seg-km">Thu 22</span><span class="seg-tag">Strides at km 3.2</span></div>
         <span class="grade">5 km very easy + 3 × 30 s strides</span>
         <h3>The 5 km loop</h3>
@@ -567,6 +581,48 @@
 
     var hash = (window.location.hash || '').replace('#', '');
     tabs.forEach(function (t, i) { if (t.hash === hash) select(i); });
+  })();
+
+  // Minimise sessions whose day has passed; each can still be reopened.
+  (function () {
+    var now = new Date();
+    var today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    function isPast(el) { return el.getAttribute('data-day') < today; }
+
+    var rows = Array.prototype.filter.call(document.querySelectorAll('tr[data-day]'), isPast);
+    if (rows.length) {
+      rows.forEach(function (r) { r.classList.add('is-past'); r.hidden = true; });
+      var first = rows[0].querySelector('td').textContent;
+      var last = rows[rows.length - 1].querySelector('td').textContent;
+      var label = (rows.length > 1 ? first + ' – ' + last : first) + ' done';
+      var tr = document.createElement('tr');
+      tr.className = 'past-toggle';
+      tr.innerHTML = '<td colspan="2"><button class="toggle" type="button" aria-expanded="false"></button></td>';
+      var btn = tr.querySelector('button');
+      btn.textContent = label + ' · show';
+      btn.addEventListener('click', function () {
+        var open = btn.getAttribute('aria-expanded') !== 'true';
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        btn.textContent = label + (open ? ' · hide' : ' · show');
+        rows.forEach(function (r) { r.hidden = !open; });
+      });
+      rows[0].parentNode.insertBefore(tr, rows[0]);
+    }
+
+    Array.prototype.filter.call(document.querySelectorAll('.route[data-day]'), isPast).forEach(function (card) {
+      card.classList.add('collapsed');
+      var btn = document.createElement('button');
+      btn.className = 'toggle';
+      btn.type = 'button';
+      btn.setAttribute('aria-expanded', 'false');
+      btn.textContent = 'Done · show';
+      btn.addEventListener('click', function () {
+        var open = card.classList.toggle('collapsed') === false;
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        btn.textContent = open ? 'Done · hide' : 'Done · show';
+      });
+      card.querySelector('.seg-top').appendChild(btn);
+    });
   })();
 </script>
 
