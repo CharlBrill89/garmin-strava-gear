@@ -176,6 +176,10 @@
   .pin.u b { text-align: center; }
   .pin i { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font: 600 11px var(--data); font-style: normal; background: var(--fg); color: var(--bg); border: 2px solid var(--bg); }
   .pin b { font-size: 11.5px; font-weight: 600; line-height: 1.2; color: var(--fg); background: color-mix(in srgb, var(--bg) 85%, transparent); padding: 2px 6px; max-width: 150px; }
+  .official-map { margin: 12px 0 0; }
+  .official-map a { display: block; }
+  .official-map img { display: block; width: 100%; height: auto; aspect-ratio: 8.5 / 11; object-fit: contain; background: #fff; border: 1px solid var(--line); border-radius: 6px; }
+  .official-map figcaption { margin-top: 6px; font-size: 12.5px; color: var(--muted); }
   .course-prof { margin: 10px 0 0; }
   .course-prof svg { display: block; width: 100%; height: 96px; }
   .course-prof .pa { opacity: .18; stroke: none; }
@@ -642,6 +646,10 @@
     <section>
       <div class="sechead"><h2>Every kilometre</h2><span>+155 m · 65–111 m</span></div>
       <p class="zonerule">Official 2026 course map from the organisers: <a class="glink" href="https://runvan.org/wp-content/uploads/2026/09/GT.M.Maps-Course-8.5x11-ALL-2026-2400px-scaled.jpg" target="_blank" rel="noopener">open the map</a> · <a class="glink" href="https://www.greattrek.ca/races/" target="_blank" rel="noopener">greattrek.ca race info</a></p>
+      <figure class="official-map">
+        <a href="https://www.greattrek.ca/wp-content/uploads/GT.M.Maps-Course-8.5x11-21KM-2026-2400px-scaled.jpg" target="_blank" rel="noopener"><img src="https://www.greattrek.ca/wp-content/uploads/GT.M.Maps-Course-8.5x11-21KM-2026-2400px-scaled.jpg" alt="Official 2026 Great Trek 21 km course map" loading="lazy"></a>
+        <figcaption>Official 2026 21 km course map. Tap to open full size.</figcaption>
+      </figure>
       <div class="scroller">
         <table class="trace perkm">
           <thead><tr><th>km</th><th class="n">Elev m</th><th class="n">Net</th><th class="n">Plan A</th><th>What it is</th></tr></thead>
