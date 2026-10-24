@@ -109,6 +109,8 @@
   .splits td.n { font-weight: 600; font-size: 15px; }
   .splits td.old { font-weight: 500; color: var(--muted); }
   .splits tr.finish td { border-top: 2px solid var(--rule); border-bottom: 0; }
+  .splits td.ahead { color: var(--hold); }
+  .splits td.behind { color: var(--push); }
   .splits td:first-child { font-weight: 600; }
   .trace td.up { color: var(--push); }
   .trace td.down { color: var(--hold); }
@@ -211,9 +213,9 @@
     <span class="eyebrow">Sat 24 Oct 2026 · 8:30 · UBC Vancouver</span>
     <h1>Great Trek Half</h1>
     <div class="goal">
-      <span>PB <b class="num">1:49:49</b> (2024)</span>
+      <span>2024 <b class="num">1:51:17</b></span>
       <span>Target <b class="num">1:48:28</b></span>
-      <span>Likely <b class="num">1:46–1:54</b></span>
+      <span>Result <b class="num">1:47:05</b> · course PB</span>
     </div>
   </header>
 
@@ -224,6 +226,59 @@
   </div>
 
   <div id="panel-race" role="tabpanel" aria-labelledby="tab-race">
+
+    <div class="headline">
+      <span class="eyebrow">Result · Sat 24 Oct</span>
+      <span class="big">1:47:05. <em>A course PB by 4:12.</em></span>
+      <p>Official chip time, 4:12 under 2024’s 1:51:17 and 83 seconds under Plan A. 272nd of 1,194 overall, 221st of 691 men and 75th of 226 in M30–39, up from 333rd of 1,251, 255th of 674 and 73rd of 201 in 2024. Climb 1, the money stretch and climb 2 each landed within a few seconds per kilometre of the card. The halves went 53:25 and 53:58: 33 s given back in the half with the bigger climb, against 71 s in 2024.</p>
+    </div>
+
+    <section>
+      <div class="sechead"><h2>Race result</h2><span>Segments vs Plan A</span></div>
+      <div class="scroller">
+        <table class="splits">
+          <thead><tr><th>Segment</th><th class="n">Time</th><th class="n">Pace</th><th class="n">Plan</th><th class="n">±</th><th class="n">HR</th></tr></thead>
+          <tbody>
+            <tr><td>0–3 km<span class="where">plateau · HR 152–158, cap 160</span></td><td class="n">14:47</td><td class="n">4:56</td><td class="n old">5:08</td><td class="n ahead">−37</td><td class="n">156<span class="where">max 163</span></td></tr>
+            <tr><td>3–4.9 km<span class="where">low · HR 158–163, cap 165</span></td><td class="n">9:08</td><td class="n">4:48</td><td class="n old">5:05</td><td class="n ahead">−32</td><td class="n">161<span class="where">max 168</span></td></tr>
+            <tr><td>4.9–10 km<span class="where">climb 1 · HR 163–167, cap 169</span></td><td class="n">26:49</td><td class="n">5:16</td><td class="n old">5:17</td><td class="n ahead">−8</td><td class="n">164<span class="where">max 168</span></td></tr>
+            <tr><td>10–15.5 km<span class="where">money stretch · HR 164–168, cap 169</span></td><td class="n">27:19</td><td class="n">4:58</td><td class="n old">4:59</td><td class="n ahead">−6</td><td class="n">163<span class="where">max 168</span></td></tr>
+            <tr><td>15.5–21.1 km<span class="where">climb 2 · HR 168–174, no cap</span></td><td class="n">29:18</td><td class="n">5:14</td><td class="n old">5:12</td><td class="n behind">+12</td><td class="n">165<span class="where">max 169</span></td></tr>
+            <tr class="finish"><td>Finish</td><td class="n">1:47:05</td><td class="n">5:05</td><td class="n old">5:09</td><td class="n ahead">−83</td><td class="n">163<span class="where">max 169</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="scroller">
+        <table class="splits">
+          <thead><tr><th>Marker</th><th class="n">Actual</th><th class="n">Plan A</th><th class="n">±</th></tr></thead>
+          <tbody>
+            <tr><td>3 km<span class="where">foot of the drop</span></td><td class="n">14:47</td><td class="n old">15:24</td><td class="n ahead">−37</td></tr>
+            <tr><td>10 km<span class="where">top · decision point</span></td><td class="n">50:45</td><td class="n old">51:59</td><td class="n ahead">−74</td></tr>
+            <tr><td>15.5 km<span class="where">turn · climb 2 starts</span></td><td class="n">1:18:04</td><td class="n old">1:19:24</td><td class="n ahead">−80</td></tr>
+            <tr class="finish"><td>Finish</td><td class="n">1:47:05</td><td class="n old">1:48:28</td><td class="n ahead">−83</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="zonerule">Times come from your lap-button presses at the painted markers, so they are course distance; the watch read 21.36 km, 1.2% long. The construction detours didn't change the distance: the official 2026 GPX measures 21.11 km, a full half, so 1:47:05 against 2024’s 1:51:17 compares like with like. ± is seconds against Plan A. Finish rows are the official chip time; the segments are from the watch, which ran 17 s longer at 1:47:22, about 10 s of it after the line before you stopped it. So the segments sum to −71 rather than −83, and climb 2 was closer to plan than its +12 shows.</p>
+      <div class="callout calm">
+        <b>Climb 1 ran to the card.</b> 5:16 against 5:17, never over the 169 cap, and about 166 at the top. That was the Plan A call at the decision point, and the money stretch followed at 4:58 against 4:59, with km 14 the quickest kilometre of the day.
+      </div>
+      <div class="callout calm">
+        <b>Same HR as 2024, 4:12 faster.</b> Average HR 163 against 164 for 1:51:17. That is the fitness the 2024 vs 2026 table promised.
+      </div>
+      <div class="callout">
+        <b>You went out for 1:45, and the course said no.</b> 69 s up on Plan A by the turn, with HR at 160–163 by km 2, the same spike as 2024. 1:45 needs 4:59 a kilometre on average; you were through 10 km in 50:45, already about a minute behind it, and climb 2 would have needed 4:49 to get it back. On +155 m, 1:45 is a goal for the next block, not this one.
+      </div>
+      <div class="callout">
+        <b>Climb 2 was your legs, not your heart.</b> You gave it everything and HR still averaged 165, topping out at 169, against 172 with a max of 176 in 2024. Grade-adjusted pace slipped from 4:54–4:56 on climb 1 and the money stretch to 5:07, stride shortened from about 120 cm to 115 and ground contact went up, all at the same or higher HR. That is muscle fatigue, not a heart-rate ceiling: the drops at km 3 and 14 and 15 km of pace had used up the quads before the last drag. The calf cramp in the final 200 m capped the sprint at about 4:47 a kilometre. The next PB is in long runs with hills and downhills, and leg strength, more than in VO2max.
+      </div>
+      <div class="callout calm">
+        <b>Fuel cost about 20–25 s, and it wasn't the limit.</b> Three Xact bars: cherry at km 4 (20 min), apple at 1 h around km 12, lemon with 25 mg caffeine at km 15. The first two cost a few seconds each. The third slowed you to 5:21–5:40 for about two minutes while you chewed, roughly 15 s just before climb 2. The second-half fade looks like muscle, not fuel. Next time take a gel at km 15 instead of a bar, and if you want caffeine, take more of it about 45–60 min before the start, once you've tried it in training: 25 mg at km 15 only peaks around the finish.
+      </div>
+      <div class="callout calm">
+        <b>Recovery.</b> Aerobic training effect 5.0, load 373. Race morning was the week's worst (resting HR 53, HRV 40, sleep 7.0 h / 80) and it didn't matter. Easy running only until resting HR is back near 49 and HRV is back in the 40s.
+      </div>
+    </section>
 
     <div class="headline">
       <span class="eyebrow">What the course does to you</span>
@@ -464,7 +519,7 @@
             <tr data-day="2026-10-21"><td class="n">Wed 21</td><td><b>Done — fine, a touch quick.</b> 6.1 km, 5:23 @ 150, 1 over the 149 cap but 4 bpm under 8 Oct at the same pace. HRV 45, resting HR 49, sleep 8.1 h (92)</td></tr>
             <tr data-day="2026-10-22"><td class="n">Thu 22</td><td>5 km very easy + 3 × 30 s strides</td></tr>
             <tr data-day="2026-10-23"><td class="n">Fri 23</td><td>Brisk walk, 10–20 min. No run</td></tr>
-            <tr data-day="2026-10-24"><td class="n">Sat 24</td><td><b>Race</b></td></tr>
+            <tr data-day="2026-10-24"><td class="n">Sat 24</td><td><b>Done — 1:47:05 chip, a course PB by 4:12.</b> 83 s under Plan A, 75th of 226 in M30–39, avg HR 163. Resting HR 53, HRV 40, sleep 7.0 h (80)</td></tr>
           </tbody>
         </table>
       </div>
@@ -696,7 +751,7 @@
         </table>
       </div>
       <div class="callout calm">
-        <b>You ran 1:49:49 off fifteen kilometres a week</b>, with a five-week hole in the middle and a longest run of 14 km. You are at nearly double that now, more efficient, and unbroken. That is the whole case for the PR.
+        <b>You ran 1:51:17 off fifteen kilometres a week</b>, with a five-week hole in the middle and a longest run of 14 km. You are at nearly double that now, more efficient, and unbroken. That is the whole case for the PR.
       </div>
     </section>
 
@@ -708,7 +763,7 @@
             <tr><td>Lactate threshold HR</td><td class="n">169</td><td>1 Oct 2026, mid-illness — likely higher now</td></tr>
             <tr><td>Max HR observed</td><td class="n">181</td><td>7 Jun 2026</td></tr>
             <tr><td>Race max, this course</td><td class="n">176</td><td>climb 2, 2024</td></tr>
-            <tr><td>Race average, 2024</td><td class="n">164</td><td>for 1:49:49</td></tr>
+            <tr><td>Race average, 2024</td><td class="n">164</td><td>for 1:51:17</td></tr>
             <tr><td>VO2max</td><td class="n">51.2</td><td>13 Oct 2026</td></tr>
             <tr><td>Zones</td><td class="n">Z3 155–164<br>Z4 165–172<br>Z5 173+</td><td>absolute bpm</td></tr>
             <tr><td>Sub-1:50</td><td class="n">~60%</td><td>PR, sub-1:49:49: ~55%</td></tr>
